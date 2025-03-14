@@ -241,3 +241,92 @@ this.$slots = {
 
 然而在某些场景下插槽的内容可能想要同时使用父组件域内和子组件域内的数据。要做到这一点，我们需要一种方法来让子组件在渲染时将一部分数据提供给插槽。
 
+![[scoped-slots.B67tIPc5.svg]]
+其中greetingMessage为Component的脚本中定义的变量，内部有定义的值，
+最终显示的是该值和1
+
+使用v-slot定义的变量名（slortprops）接收传来的Props
+
+通过在slot tag中使用v-bind语法，实现了子传父的通信
+
+具名的情况：v-slot:name="slotProps"，简写写法为
+
+```vue
+<template #header="headerProps"> {{ headerProps }} </template>
+```
+
+向具名插槽中传入 props：
+
+```vue
+<slot name="header" message="hello"></slot>
+```
+
+注意插槽上的 `name` 是一个 Vue 特别保留的 attribute，不会作为 props 传递给插槽。因此最终 `headerProps` 的结果是 `{ message: 'hello' }`
+
+如果你同时使用了具名插槽与默认插槽，则需要为默认插槽使用显式的 `<template>` 标签。
+
+```vue
+<!-- <MyComponent> template -->
+<div>
+  <slot :message="hello"></slot>
+  <slot name="footer" />
+</div>
+```
+
+```vue
+<MyComponent>
+  <!-- 使用显式的默认插槽 -->
+  <template #default="{ message }">
+    <p>{{ message }}</p>
+  </template>
+
+  <template #footer>
+    <p>Here's some contact info</p>
+  </template>
+</MyComponent>
+```
+
+# 高级列表组件示例
+
+在某些场景中，我们可能想要为子组件传递一些模板片段，让子组件在它们的组件中渲染这些片段。
+
+`<slot>` 元素是一个**插槽出口** (slot outlet)，标示了父元素提供的**插槽内容** (slot content) 将在哪里被渲染。
+
+`<FancyList>`组件：
+
+它会渲染一个列表，
+并同时会封装一些
+- 加载远端数据的逻辑
+- 使用数据进行列表渲染
+- 分页或无限滚动
+这样更进阶的功能。
+
+然而我们希望它能够保留足够的灵活性，
+将对单个列表元素内容和样式的控制权留给使用它的父组件。
+
+```vue
+<FancyList :api-url="url" :per-page="10">
+  <template #item="{ body, username, likes }">
+    <div class="item">
+      <p>{{ body }}</p>
+      <p>by {{ username }} | {{ likes }} likes</p>
+    </div>
+  </template>
+</FancyList>
+```
+
+在 `<FancyList>` 之中，我们可以多次渲染 `<slot>` 并每次都提供不同的数据 (注意我们这里使用了 `v-bind` 来传递插槽的 props)：
+
+```vue
+<ul>
+  <li v-for="item in items">
+    <slot name="item" v-bind="item"></slot>
+  </li>
+</ul>
+```
+
+这里在script里写了个items表存不同数据
+
+上面的 `<FancyList>` 案例同时封装了可重用的逻辑 (数据获取、分页等) 和视图输出，但也将部分视图输出通过作用域插槽交给了消费者组件来管理。
+
+作用域插槽在需要**同时**封装逻辑、组合视图界面时还是很有用，就像上面的 `<FancyList>` 组件那样。
