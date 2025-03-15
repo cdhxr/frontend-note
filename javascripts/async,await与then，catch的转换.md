@@ -1,5 +1,8 @@
-
-
+---
+tags:
+  - js
+  - promise
+---
 
 
 使用 `async/await` 重写 `then/catch` 可以让异步代码更简洁、易读。以下是关键技巧和示例：

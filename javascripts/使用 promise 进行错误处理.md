@@ -1,3 +1,9 @@
+---
+tags:
+  - js
+  - promise
+---
+
 
 捕获所有 error 的最简单的方法是，将 `.catch` 附加到链的末尾：
 

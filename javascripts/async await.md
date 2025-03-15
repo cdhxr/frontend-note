@@ -1,3 +1,8 @@
+---
+tags:
+  - js
+  - promise
+---
 
 async/await 是以更舒适的方式使用 promise 的一种特殊语法，同时它也非常易于理解和使用。
 
@@ -19,9 +24,8 @@ async function f() {
 	let promise = new Promise((resolve, reject) => {
 	  setTimeout(() => resolve("done!"), 1000)
 	});
-
-	let result = await promise; // 等待，直到 promise resolve (*)
 	
+	let result = await promise; // 等待，直到 promise resolve (*)
 	alert(result); // "done!"
 }
 
