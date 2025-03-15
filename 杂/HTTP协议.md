@@ -185,6 +185,7 @@ HTTP报文是基于**文本**的通信内容，通常由以下部分组成：
 | Set-Cookie                  | 设置和页面关联的 cookie，服务器通过这个头部把 cookie 传给客户端 |
 | Server                      | 服务器的一些相关信息                              |
 | Access-Control-Allow-Origin | 服务器端允许的请求 Origin 头部 (譬如为 *)             |
+|                             |                                         |
 
 ## 缓存（请求头场景）
 
