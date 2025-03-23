@@ -50,13 +50,8 @@ let response = await fetch('/article/formdata/post/user', {
 ```js
 <!-- 表单元素，id 为 formElem -->
 <form id="formElem">
-  <!-- 文本输入框，用户可以输入名字，默认值为 "John" -->
   <input type="text" name="firstName" value="John">
-  
-  <!-- 文件输入框，用户可以选择上传图片，限制文件类型为图片 -->
   Picture: <input type="file" name="picture" accept="image/*">
-  
-  <!-- 提交按钮 -->
   <input type="submit">
 </form>
 
