@@ -124,7 +124,7 @@ function MyButton() {
 
 # 更新界面
 
-类似于vue中的响应式变量（ref，reactive）
+作用类似于vue中的响应式变量（ref，reactive）
 
 1. `import { useState } from 'react';`导入
 2. 声明state变量
@@ -136,3 +136,8 @@ useState也是一个hook
 类似于之前vue的学习，hook是一种特殊的函数，封装了一套逻辑，可以在组件中调用公开的方法和属性
 
 `const [thing, setThing] = useState(0);`
+
+每次你的组件渲染时，`useState` 都会给你一个包含两个值的数组：
+
+1. **state 变量** 会保存上次渲染的值。
+2. **state setter 函数** 可以更新 state 变量并触发 React 重新渲染组件。
