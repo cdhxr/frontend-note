@@ -57,6 +57,23 @@ return (
 
 大括号内可以传递对象的值，以及对象相关的表达式
 
+- 在 JSX 的大括号内引用 JavaScript 变量
+	- 当你想把一个字符串属性传递给 JSX 时，把它放到单引号或双引号中
+	- **使用 JavaScript 变量** ：`src={avatar}`
+- 在 JSX 的大括号内调用 JavaScript 函数
+- 在 JSX 的大括号内使用 JavaScript 对象
+
+### 可以在哪使用大括号
+
+在 JSX 中，只能在以下两种场景中使用大括号：
+
+1. 用作 JSX 标签内的**文本**：`<h1>{name}'s To Do List</h1>` 是有效的，但是 `<{tag}>Gregorio Y. Zara's To Do List</{tag}>` 无效。
+2. 用作紧跟在 `=` 符号后的 **属性**：`src={avatar}` 会读取 `avatar` 变量，但是 `src="{avatar}"` 只会传一个字符串 `{avatar}`。
+
+## 使用 “双大括号”：JSX 中的 CSS 和 对象
+
+除了字符串、数字和其它 JavaScript 表达式，你甚至可以在 JSX 中传递对象。对象也用大括号表示，例如 `{ name: "Hedy Lamarr", inventions: 5 }`。因此，为了能在 JSX 中传递，你必须用另一对额外的大括号包裹对象：`person={{ name: "Hedy Lamarr", inventions: 5 }}`。
+
 # 条件渲染
 
 React 没有特殊的语法来编写条件语句，因此你使用的就是普通的 JavaScript 代码。
@@ -122,22 +139,21 @@ function MyButton() {
 
 可以在组件内声明 **事件处理** 函数来响应事件
 
-# 更新界面
+# State
 
-作用类似于vue中的响应式变量（ref，reactive）
+[[State in react]]
 
-1. `import { useState } from 'react';`导入
-2. 声明state变量
-3. 可当做响应式变量使用
+# 组件通信
 
-在 React 中，`useState` 以及任何其他以“`use`”开头的函数都被称为 **Hook**。
-useState也是一个hook
+## 导入和导出（import and export）
 
-类似于之前vue的学习，hook是一种特殊的函数，封装了一套逻辑，可以在组件中调用公开的方法和属性
+不同导出方式：[[export]]
 
-`const [thing, setThing] = useState(0);`
+|语法|导出语句|导入语句|
+|---|---|---|
+|默认|`export default function Button() {}`|`import Button from './Button.js';`|
+|具名|`export function Button() {}`|`import { Button } from './Button.js';`|
 
-每次你的组件渲染时，`useState` 都会给你一个包含两个值的数组：
+**同一文件中，有且仅有一个默认导出，但可以有多个具名导出！**
 
-1. **state 变量** 会保存上次渲染的值。
-2. **state setter 函数** 可以更新 state 变量并触发 React 重新渲染组件。
+
