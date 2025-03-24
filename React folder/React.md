@@ -1,5 +1,79 @@
 
-React 可以改变你对可见设计和应用构建的思考。当你使用 React 构建用户界面时，你首先会把它分解成一个个 **组件**，然后，你需要把这些组件连接在一起，使数据流经它们。
+React 可以改变你对可见设计和应用构建的思考。当你使用 React 构建用户界面时，你首先
+会把它分解成一个个 **组件**，然后，你需要把这些组件连接在一起，使数据流经它们。
+
+# React的哲学——纯函数
+
+**传入组件的变量的值不应该是动态的**（有相应需求用State）
+
+**渲染（Render）只是计算组件 UI 应该是什么样子，而不应该直接修改 DOM 或执行其他副作用操作**。
+
+---
+
+### **🔹 如何用上面的例子来理解这句话？**
+
+在 **第一种写法**：
+
+```jsx
+export default function Clock({ time }) {
+  let hours = time.getHours();
+  let className = hours >= 0 && hours <= 6 ? 'night' : 'day';
+
+  return (
+    <h1 className={className}>
+      {time.toLocaleTimeString()}
+    </h1>
+  );
+}
+```
+
+#### **✅ 符合“渲染是一种计算过程”**
+
+- **渲染时，组件只是计算 `className` 和 `h1` 的内容**，然后交给 React **决定如何更新 UI**。
+- 这里的 `className` 计算是**纯函数**，不会对外部产生影响，只是**描述 UI 该是什么样子**。
+- React 内部会**对比新旧虚拟 DOM**，然后**最小化真实 DOM 变更**，保证高效更新。
+
+---
+
+在 **第二种写法**：
+
+```jsx
+export default function Clock({ time }) {
+  let hours = time.getHours();
+  
+  if (hours >= 0 && hours <= 6) {
+    document.getElementById('time').className = 'night';
+  } else {
+    document.getElementById('time').className = 'day';
+  }
+
+  return (
+    <h1 id="time">
+      {time.toLocaleTimeString()}
+    </h1>
+  );
+}
+```
+
+#### **❌ 违反“渲染是一种计算过程”**
+
+- **渲染时，组件不只是计算 UI，而是试图直接修改 DOM** (`document.getElementById`)。
+- 这样做会带来**副作用**，即：
+    - `document.getElementById('time')` 可能为 `null`，导致错误。
+    - 手动修改 `className` 可能与 React 的渲染机制**冲突**，导致 React **下一次渲染覆盖掉手动修改的 className**。
+    - 直接操作 DOM 可能影响性能，因为 React 期望**通过虚拟 DOM** 计算最优更新方式，而手动操作可能绕过这个机制。
+
+---
+
+### **🔹 结论**
+
+**渲染应该是一个“纯计算”过程，而不是“做事情”**：
+
+- **计算**：React 组件的 `render` 方法（或者函数组件的 `return`）应该**仅仅计算**组件的 UI 结构，而不应该**直接修改 DOM** 或执行其他副作用操作。
+- **不要做事情**：手动修改 DOM、执行网络请求、修改全局变量等操作，不应该发生在渲染过程中，而应该放到 **`useEffect`** 这样的 React 生命周期钩子里去执行。
+
+因此，**第一种写法符合 React 设计理念**，而**第二种写法则违背了 React 渲染的核心原则**。
+
 
 # 组件
 
@@ -239,6 +313,33 @@ function MyButton() {
 ```
 
 可以在组件内声明 **事件处理** 函数来响应事件
+
+事件处理函数有如下特点:
+
+- 通常在你的组件 **内部** 定义。
+- 名称以 `handle` 开头，后跟事件名称。
+
+你也可以在 JSX 中定义一个内联的事件处理函数：
+
+```js
+<button onClick={function handleClick() {
+  alert('你点击了我！');
+}}>
+
+<button onClick={() => {
+  alert('你点击了我！');
+}}>
+```
+
+以上所有方式都是等效的。当函数体较短时，内联事件处理函数会很方便。
+
+| 传递一个函数（正确）                       | 调用一个函数（错误）                         |
+| -------------------------------- | ---------------------------------- |
+| `<button onClick={handleClick}>` | `<button onClick={handleClick()}>` |
+
+## 在事件处理函数中读取 props
+
+由于事件处理函数声明于组件内部，因此它们可以直接访问组件的 props。
 
 # State
 
