@@ -10,7 +10,7 @@ React 可以改变你对可见设计和应用构建的思考。当你使用 Reac
 2. **渲染** 组件（在厨房准备订单）
 3. **提交** 到 DOM（将菜品放在桌子上）
 
-[[]]
+详情：[渲染和提交](https://zh-hans.react.dev/learn/render-and-commit)
 
 # React的哲学——纯函数
 
