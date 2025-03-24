@@ -403,6 +403,22 @@ setArtists(
     setName('');
   }
 ```
+对象
+```js
+  function handleIncreaseClick(productId) {
+    setProducts(products.map(product => {
+      if (product.id === productId) {
+        return {
+          ...product,
+          count: product.count + 1
+        };
+      } else {
+        return product;
+      }
+    }))
+  }
+```
+
 
 - 你可以把数组放入 state 中，但你不应该直接修改它。
 - 不要直接修改数组，而是创建它的一份 **新的** 拷贝，然后使用新的数组来更新它的状态。
