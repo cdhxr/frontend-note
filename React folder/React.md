@@ -2,6 +2,16 @@
 React 可以改变你对可见设计和应用构建的思考。当你使用 React 构建用户界面时，你首先
 会把它分解成一个个 **组件**，然后，你需要把这些组件连接在一起，使数据流经它们。
 
+# React 渲染流程
+
+想象一下，你的组件是厨房里的厨师，把食材烹制成美味的菜肴。在这种场景下，React 就是一名服务员，他会帮客户们下单并为他们送来所点的菜品。这种请求和提供 UI 的过程总共包括三个步骤：
+
+1. **触发** 一次渲染（把客人的点单分发到厨房）
+2. **渲染** 组件（在厨房准备订单）
+3. **提交** 到 DOM（将菜品放在桌子上）
+
+[[]]
+
 # React的哲学——纯函数
 
 **传入组件的变量的值不应该是动态的**（有相应需求用State）
@@ -171,6 +181,8 @@ React 没有特殊的语法来编写条件语句，因此你使用的就是普�
 
 # 渲染列表
 
+[[react-for detail]]
+
 你将依赖 JavaScript 的特性，例如 [`for` 循环](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Statements/for) 和 [array 的 `map()` 函数](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Array/map) 来渲染组件列表。
 
 产品数组：
@@ -199,104 +211,10 @@ return (
 ```
 
 注意， `<li>` 有一个 `key` 属性。
-## 流程
-
-这里我们有一个列表。
-
-```html
-<ul>
-  <li>凯瑟琳·约翰逊: 数学家</li>
-  <li>马里奥·莫利纳: 化学家</li>
-  <li>穆罕默德·阿卜杜勒·萨拉姆: 物理学家</li>
-  <li>珀西·莱温·朱利亚: 化学家</li>
-  <li>苏布拉马尼扬·钱德拉塞卡: 天体物理学家</li>
-</ul>
-```
-
-这些列表项之间唯一的区别就是其中的内容/数据。
-未来你可能会碰到很多类似的情况，在那些场景中，你想基于不同的数据渲染出相似的组件，比如评论列表或者个人资料的图库。
-
-这里给出一个由数组生成一系列列表项的简单示例：
-
-1. 首先，把数据 **存储** 到数组中，并让其变得更加结构化：
-
-```js
-const people = [{
-  id: 0,
-  name: '凯瑟琳·约翰逊',
-  profession: '数学家',
-}, {
-  id: 1,
-  name: '马里奥·莫利纳',
-  profession: '化学家',
-}, {
-  id: 2,
-  name: '穆罕默德·阿卜杜勒·萨拉姆',
-  profession: '物理学家',
-}, {
-  id: 3,
-  name: '珀西·莱温·朱利亚',
-  profession: '化学家',
-}, {
-  id: 4,
-  name: '苏布拉马尼扬·钱德拉塞卡',
-  profession: '天体物理学家',
-}];
-```
-
-2. 过滤得到新数组，**遍历** `people` 这个数组中的每一项，并获得一个新的 JSX 节点数组 `chemists`：
-
-```js
-const chemists = people.filter(person =>
-  person.profession === '化学家'
-);
-```
-
-3. 接下来 **用 map 方法遍历** `chemists` 数组，并用 `key` 保持列表项的顺序 :
-
-```js
-const listItems = chemists.map(person =>
-  <li key={person.id}>
-     <img
-       src={getImageUrl(person)}
-       alt={person.name}
-     />
-     <p>
-       <b>{person.name}:</b>
-       {' ' + person.profession + ' '}
-       因{person.accomplishment}而闻名世界
-     </p>
-  </li>
-);
-```
-
-
-4. 把 `listItems` 用 `<ul>` 包裹起来，然后 **返回** 它：
-
-```js
-return <ul>{listItems}</ul>;
-```
-
-## **key**
-
-直接放在 `map()` 方法里的 JSX 元素一般都需要指定 `key` 值！
-
-不同来源的数据往往对应不同的 key 值获取方式：
-
-- **来自数据库的数据：** 如果你的数据是从数据库中获取的，那你可以直接使用数据表中的主键，因为它们天然具有唯一性。
-- **本地产生数据：** 如果你数据的产生和保存都在本地（例如笔记软件里的笔记），那么你可以使用一个自增计数器或者一个类似 [`uuid`](https://www.npmjs.com/package/uuid) 的库来生成 key。
-
-- **key 值在兄弟节点之间必须是唯一的。** 不过不要求全局唯一，在不同的数组中可以使用相同的 key。
-- **key 值不能改变**，否则就失去了使用 key 的意义！所以千万不要在渲染时动态地生成 key。
-
-React 里需要 key 和文件夹里的文件需要有文件名的道理是类似的。
-
-###  注意
-你可能会想直接把数组项的索引当作 key 值来用，实际上，如果你没有显式地指定 `key` 值，React 确实默认会这么做。但是数组项的顺序在插入、删除或者重新排序等操作中会发生改变，此时把索引顺序用作 key 值会产生一些微妙且令人困惑的 bug。
-
-与之类似，请不要在运行过程中动态地产生 key，像是 `key={Math.random()}` 这种方式。这会导致每次重新渲染后的 key 值都不一样，从而使得所有的组件和 DOM 元素每次都要重新创建。这不仅会造成运行变慢的问题，更有可能导致用户输入的丢失。所以，使用能从给定数据中稳定取得的值才是明智的选择。
 
 # 响应事件
+
+[[event in react]]
 
 ```js
 function MyButton() {
@@ -336,107 +254,7 @@ function MyButton() {
 | 传递一个函数（正确）                       | 调用一个函数（错误）                         |
 | -------------------------------- | ---------------------------------- |
 | `<button onClick={handleClick}>` | `<button onClick={handleClick()}>` |
-
-## 事件处理函数与 props
-
-由于事件处理函数声明于组件内部，因此它们可以直接访问组件的 props。
-
-```js
-function AlertButton({ message, children }) {
-  return (
-    <button onClick={() => alert(message)}>
-      {children}
-    </button>
-  );
-}
-```
-
-通常，我们会在父组件中定义子组件的事件处理函数。
-此时，我们需要将事件处理函数本身作为Props传递。
-
-```js
-//你的 `Button` 组件接收一个名为 `onClick` 的 prop。
-//它直接将这个 prop 以 `onClick={onClick}` 方式传递给浏览器内置的 `<button>`。
-//当点击按钮时，React 会调用传入的函数。
-
-function Button({ onClick, children }) {
-  return (
-    <button onClick={onClick}>
-      {children}
-    </button>
-  );
-}
-
-function UploadButton() {
-  return (
-    <Button onClick={() => alert('正在上传！')}>
-      上传图片
-    </Button>
-  );
-}
-```
-
-内置组件（`<button>` 和 `<div>`）仅支持 [浏览器事件名称](https://zh-hans.react.dev/reference/react-dom/components/common#common-props)，例如 `onClick`。但是，当你构建自己的组件时，你可以按你个人喜好命名事件处理函数的 prop。
-
-```js
-function Button({ onSmash, children }) {
-  return (
-    <button onClick={onSmash}>
-      {children}
-    </button>
-  );
-}
-```
-
-## 事件传递
-
-自然的，事件会冒泡
-
-事件处理函数接收一个 **事件对象** 作为唯一的参数。按照惯例，它通常被称为 `e` ，代表 “event”（事件）。你可以使用此对象来读取有关事件的信息。
-
-这个事件对象还允许你阻止传播。如果你想阻止一个事件到达父组件，你需要像下面 `Button` 组件那样调用 `e.stopPropagation()`
-
-```js
-function Button({ onClick, children }) {
-  return (
-    <button onClick={e => {
-      e.stopPropagation();//调用onClick前执行了其他语句
-      onClick();
-    }}>
-      {children}
-    </button>
-  );
-}
-```
-
-你也可以在调用父元素 `onClick` 函数之前，向这个处理函数添加更多代码。此模式是事件传播的另一种 **替代方案** 。它让子组件处理事件，同时也让父组件指定一些额外的行为。
-
-### 阻止默认事件
-
-某些浏览器事件具有与事件相关联的默认行为。例如，点击 `<form>` 表单内部的按钮会触发表单提交事件，默认情况下将重新加载整个页面
-
-你可以调用事件对象中的 `e.preventDefault()` 来阻止这种情况发生：
-
-```js
-export default function Signup() {
-  return (
-    <form onSubmit={e => {
-      e.preventDefault();
-      alert('提交表单！');
-    }}>
-      <input />
-      <button>发送</button>
-    </form>
-  );
-}
-```
-
-- `e.stopPropagation()` 阻止触发绑定在外层标签上的事件处理函数。
-- `e.preventDefault()` 阻止少数事件的默认浏览器行为。
-
-## 处理函数可以存在动态变量，即不是纯函数
-
-与渲染函数不同，事件处理函数不需要是 [纯函数](https://zh-hans.react.dev/learn/keeping-components-pure)，因此它是用来 _更改_ 某些值的绝佳位置。例如，更改输入框的值以响应键入，或者更改列表以响应按钮的触发。但是，为了更改某些信息，你首先需要某种方式存储它。在 React 中，这是通过 [state（组件的记忆）](https://zh-hans.react.dev/learn/state-a-components-memory) 来完成的。
+|                                  |                                    |
 
 # State
 
