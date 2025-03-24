@@ -337,9 +337,63 @@ function MyButton() {
 | -------------------------------- | ---------------------------------- |
 | `<button onClick={handleClick}>` | `<button onClick={handleClick()}>` |
 
-## 在事件处理函数中读取 props
+## 事件处理函数与 props
 
 由于事件处理函数声明于组件内部，因此它们可以直接访问组件的 props。
+
+```js
+function AlertButton({ message, children }) {
+  return (
+    <button onClick={() => alert(message)}>
+      {children}
+    </button>
+  );
+}
+```
+
+通常，我们会在父组件中定义子组件的事件处理函数。
+此时，我们需要将事件处理函数本身作为Props传递。
+
+```js
+//你的 `Button` 组件接收一个名为 `onClick` 的 prop。
+//它直接将这个 prop 以 `onClick={onClick}` 方式传递给浏览器内置的 `<button>`。
+//当点击按钮时，React 会调用传入的函数。
+
+function Button({ onClick, children }) {
+  return (
+    <button onClick={onClick}>
+      {children}
+    </button>
+  );
+}
+
+function UploadButton() {
+  return (
+    <Button onClick={() => alert('正在上传！')}>
+      上传图片
+    </Button>
+  );
+}
+```
+
+内置组件（`<button>` 和 `<div>`）仅支持 [浏览器事件名称](https://zh-hans.react.dev/reference/react-dom/components/common#common-props)，例如 `onClick`。但是，当你构建自己的组件时，你可以按你个人喜好命名事件处理函数的 prop。
+
+```js
+function Button({ onSmash, children }) {
+  return (
+    <button onClick={onSmash}>
+      {children}
+    </button>
+  );
+}
+```
+
+## 事件传递
+
+自然的，事件会冒泡
+
+事件处理函数接收一个 **事件对象** 作为唯一的参数。按照惯例，它通常被称为 `e` ，代表 “event”（事件）。你可以使用此对象来读取有关事件的信息。
+
 
 # State
 
