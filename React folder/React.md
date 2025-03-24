@@ -409,6 +409,7 @@ setArtists(
     setProducts(products.map(product => {
       if (product.id === productId) {
         return {
+          //注意顺序和对象属性修改语法
           ...product,
           count: product.count + 1
         };
