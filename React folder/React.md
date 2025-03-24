@@ -260,6 +260,156 @@ function MyButton() {
 
 [[State in react]]
 
+[[State Render flow]]
+
+## 存放对象
+
+- 将 React 中所有的 state 都视为不可直接修改的。
+- 当你在 state 中存放对象时，直接修改对象并不会触发重渲染，并会改变前一次渲染“快照”中 state 的值。
+- 不要直接修改一个对象，而要为它创建一个 **新** 版本，并通过把 state 设置成这个新版本来触发重新渲染。
+- 你可以使用这样的 `{...obj, something: 'newValue'}` 对象展开语法来创建对象的拷贝。
+- 对象的展开语法是浅层的：它的复制深度只有一层。
+- 想要更新嵌套对象，你需要从你更新的位置开始自底向上为每一层都创建新的拷贝。
+- 想要减少重复的拷贝代码，可以使用 Immer。
+
+
+现在考虑 state 中存放对象的情况：
+
+```
+const [position, setPosition] = useState({ x: 0, y: 0 });
+```
+
+从技术上来讲，可以改变对象自身的内容。**当你这样做时，就制造了一个 mutation**：
+
+```
+position.x = 5;
+```
+
+然而，虽然严格来说 React state 中存放的对象是可变的，但你应该像处理数字、布尔值、字符串一样将它们视为不可变的。因此你应该替换它们的值，而不是对它们进行修改。
+
+换句话说，你应该 **把所有存放在 state 中的 JavaScript 对象都视为只读的**。
+
+```js
+onPointerMove={e => {  
+  position.x = e.clientX;  
+  position.y = e.clientY;  
+}}
+//应该采用后者的修改方式
+onPointerMove={e => {
+  setPosition({
+    x: e.clientX,
+    y: e.clientY
+  });
+}}
+```
+
+通常，你会希望把 **现有** 数据作为你所创建的新对象的一部分。例如，你可能只想要更新表单中的一个字段，其他的字段仍然使用之前的值。
+
+但使用set必须要对对象的所有属性更新，这带来了不便，我们可以用展开语法解决
+
+```js
+setPerson({
+  ...person, // 复制上一个 person 中的所有字段
+  firstName: e.target.value // 但是覆盖 firstName 字段 
+});
+
+//嵌套的情况
+setPerson({
+  ...person, // 复制其它字段的数据 
+  artwork: { // 替换 artwork 字段 
+    ...person.artwork, // 复制之前 person.artwork 中的数据
+    city: 'New Delhi' // 但是将 city 的值替换为 New Delhi！
+  }
+});
+```
+
+如果你的 state 有多层的嵌套，你或许应该考虑 [将其扁平化](https://zh-hans.react.dev/learn/choosing-the-state-structure#avoid-deeply-nested-state)。或者  [使用 Immer 编写简洁的更新逻辑](https://zh-hans.react.dev/learn/updating-objects-in-state#write-concise-update-logic-with-immer "Link for 使用 Immer 编写简洁的更新逻辑")
+
+## 更新数组
+
+为了避免mutation
+
+| 避免使用 (会改变原始数组) | 推荐使用 (会返回一个新数组）            |                                                                                                             |
+| -------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| 添加元素           | `push`，`unshift`           | `concat`，`[...arr]` 展开语法（[例子](https://zh-hans.react.dev/learn/updating-arrays-in-state#adding-to-an-array)） |
+| 删除元素           | `pop`，`shift`，`splice`     | `filter`，`slice`（[例子](https://zh-hans.react.dev/learn/updating-arrays-in-state#removing-from-an-array)）     |
+| 替换元素           | `splice`，`arr[i] = ...` 赋值 | `map`（[例子](https://zh-hans.react.dev/learn/updating-arrays-in-state#replacing-items-in-an-array)）           |
+| 排序             | `reverse`，`sort`           | 先将数组复制一份（[例子](https://zh-hans.react.dev/learn/updating-arrays-in-state#making-other-changes-to-an-array)）   |
+
+或者，你可以[使用 Immer](https://zh-hans.react.dev/learn/updating-arrays-in-state#write-concise-update-logic-with-immer) ，这样你便可以使用表格中的所有方法了。
+
+增
+```js
+setArtists( // 替换 state
+  [ // 是通过传入一个新数组实现的
+    ...artists, // 新数组包含原数组的所有元素
+    { id: nextId++, name: name } // 并在末尾添加了一个新的元素
+  ]
+);
+```
+删
+```js
+setArtists(
+  artists.filter(a => a.id !== artist.id)
+);
+```
+批量转换
+```js
+  function handleClick() {
+    const nextShapes = shapes.map(shape => {
+      if (shape.type === 'square') {
+        // 不作改变
+        return shape;
+      } else {
+        // 返回一个新的圆形，位置在下方 50px 处
+        return {
+          ...shape,
+          y: shape.y + 50,
+        };
+      }
+    });
+    // 使用新的数组进行重渲染
+    setShapes(nextShapes);
+  }
+```
+数据更新
+```js
+  function handleIncrementClick(index) {
+    const nextCounters = counters.map((c, i) => {
+      if (i === index) {
+        // 递增被点击的计数器数值
+        return c + 1;
+      } else {
+        // 其余部分不发生变化
+        return c;
+      }
+    });
+    setCounters(nextCounters);
+  }
+```
+插入
+```js
+ function handleClick() {
+    const insertAt = 1; // 可能是任何索引
+    const nextArtists = [
+      // 插入点之前的元素：
+      ...artists.slice(0, insertAt),
+      // 新的元素：
+      { id: nextId++, name: name },
+      // 插入点之后的元素：
+      ...artists.slice(insertAt)
+    ];
+    setArtists(nextArtists);
+    setName('');
+  }
+```
+
+- 你可以把数组放入 state 中，但你不应该直接修改它。
+- 不要直接修改数组，而是创建它的一份 **新的** 拷贝，然后使用新的数组来更新它的状态。
+- 你可以使用 `[...arr, newItem]` 这样的数组展开语法来向数组中添加元素。
+- 你可以使用 `filter()` 和 `map()` 来创建一个经过过滤或者变换的数组。
+- 你可以使用 Immer 来保持代码简洁。
+
 # 组件通信
 
 ## 导入和导出（import and export）
