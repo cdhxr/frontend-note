@@ -262,6 +262,8 @@ function MyButton() {
 
 [[State Render flow]]
 
+[[构建State的原则]]
+
 ## 存放对象
 
 - 将 React 中所有的 state 都视为不可直接修改的。
@@ -444,3 +446,56 @@ setArtists(
 ## props传递
 
 [[Props in React]]
+
+## 组件中的状态共享
+
+有时候，你希望两个组件的状态始终同步更改。
+- 要实现这一点，可以将相关 state 从这两个组件上移除，并把 state 放到它们的公共父级，再通过 props 将 state 传递给这两个组件。
+- 这被称为“状态提升”，这是编写 React 代码时常做的事。
+  
+![[sharing_state_child_clicked.webp]]
+
+我们发现点击其中一个面板中的按钮并不会影响另外一个，他们是独立的。
+
+**假设现在你想改变这种行为，以便在任何时候只展开一个面板**。
+在这种设计下，展开第 2 个面板应会折叠第 1 个面板。你该如何做到这一点呢？
+
+要协调好这两个面板，我们需要分 3 步将状态“提升”到他们的父组件中。
+
+1. 从子组件中 **移除** state 。
+
+我们先从 `Panel` 组件中 **删除下面这一行**：
+
+```
+const [isActive, setIsActive] = useState(false);
+```
+
+然后，把 `isActive` 加入 `Panel` 组件的 `props` 中：
+
+```
+function Panel({ title, children, isActive }) {
+```
+
+现在 `Panel` 的父组件就可以通过 [向下传递 prop](https://zh-hans.react.dev/learn/passing-props-to-a-component) 来 **控制** `isActive`。但相反地，`Panel` 组件对 `isActive` 的值 **没有控制权** —— 现在完全由父组件决定！
+
+2. 从父组件 **传递** 硬编码数据。
+
+```js
+export default function Accordion() {
+  return (
+    <>
+      <h2>哈萨克斯坦，阿拉木图</h2>
+      <Panel title="关于" isActive={true}>
+      //...
+      </Panel>
+      <Panel title="词源" isActive={true}>
+      //...
+      </Panel>
+    </>
+  );
+}
+```
+
+3. 为共同的父组件添加 state ，并将其与事件处理函数一起向下传递。
+
+这样，`Accordion` 组件就可以控制 2 个 `Panel` 组件，保证同一时间只能展开一个。
