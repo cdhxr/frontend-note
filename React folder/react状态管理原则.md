@@ -40,3 +40,5 @@ const [status, setStatus] = useState('typing'); // 'typing', 'submitting', or 's
 - 最后，创建事件处理函数去设置 state 变量。
 
 [详细解释](https://zh-hans.react.dev/learn/reacting-to-input-with-state#step-3-represent-the-state-in-memory-with-usestate)
+
+[[原生 stage management hooks]]
