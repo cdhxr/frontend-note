@@ -1,0 +1,2 @@
+中级： components hooks assets data context pages utils，容器组件加傻瓜组件的方法，共用的 context hook 全放到最外层。缺点是， 容器组件下的代码复用困难。 
+高级：相比于中级项目，增加 features 实现对单个功能的封装，pages 下仅有 js 文件，以 features 组装成不同的页面。加点 layout，第三方组件库的封装啥的。
