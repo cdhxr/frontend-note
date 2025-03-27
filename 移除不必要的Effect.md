@@ -58,9 +58,6 @@ function useOnlineStatus() {
 
 **获取数据**时使用useEffect的方法
 
-
-
-
 假设你快速地输入 `“hello”`。那么 `query` 会从 `“h”` 变成 `“he”`，`“hel”`，`“hell”` 最后是 `“hello”`。这会触发一连串不同的数据获取请求，但无法保证对应的返回顺序。例如，`“hell”` 的响应可能在 `“hello”` 的响应 **之后** 返回。由于它的 `setResults()` 是在最后被调用的，你将会显示错误的搜索结果。这种情况被称为 “[竞态条件](https://en.wikipedia.org/wiki/Race_condition)”：两个不同的请求 “相互竞争”，并以与你预期不符的顺序返回。
 
 **为了修复这个问题，你需要添加一个 清理函数 来忽略较早的返回结果：**
