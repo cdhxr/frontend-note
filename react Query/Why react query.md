@@ -1,5 +1,10 @@
 # Why we need react query
 
+1. `useEffect` is [confusing](https://stackoverflow.com/questions/tagged/react-hooks?tab=Votes).
+2. Context often becomes confusing over time.
+3. Combining `useState`, `useEffect`, and Context together in an attempt to "manage" state will lead to pain and suffering.
+4. We're treating _asynchronous_ state as if it were _synchronous_ state.
+
 ## effect获取数据的狼狈case
 直接使用fetch in Effect得到数据：
  let me tell you that I immediately spotted 🐛 5 bugs 🪲 hiding in these 10 lines of code.
@@ -212,4 +217,34 @@ function Bookmarks({ category }) {
   // Return JSX based on data and error state
 }
 ```
+
+
+
+# React Query is not a data fetching library
+
+ Because it should be clear by now that data fetching itself is not the hard part - it's _managing_ that data over time that is.难得是随着时间管理异步状态
+
+In fact, React Query doesn't even fetch any data for you. YOU provide it a promise (whether from `fetch`, `axios`, `graphql`, `IndexedDB`, etc.), and React Query will then take the data that the promise resolves with and make it available wherever you need it throughout your entire application.
+
+fetch得到promise，react query解析其中数据，这个数据可以在任何地方使用
+
+From there, it can handle all of the dirty work that you're either unaware of, or you shouldn't be thinking about.
+
+1. Cache management
+2. Cache invalidation
+3. Auto refetching
+4. Scroll recovery
+5. Offline support
+6. Window focus refetching
+7. Dependent queries
+8. Paginated queries
+9. Request cancellation
+10. Prefetching
+11. Polling
+12. Mutations
+13. Infinite scrolling
+14. Data selectors
+15. + More
+
+因此可以不在获取数据时使用useEffect，他将极大的简化开发流程
 
