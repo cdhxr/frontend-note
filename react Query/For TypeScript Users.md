@@ -52,3 +52,8 @@ function useIssue(id: number | undefined) {
 当 React Query 遇到 `skipToken` 时，它会将 `enabled` 设置为 `false`。然而，TypeScript 会因为条件检查而正确地缩小 `id` 的类型为 `number`，从而解决类型问题。
 
 ---
+# useQueries
+
+`useQueries` 的类型定义相当复杂。如果传入的是一个静态数组，返回的将是一个元组（tuple），这样可以安全地解构，即使每个查询返回的数据结构不同也不会有问题。而对于动态数组，返回的则是一个 `QueryResult` 数组。
+
+在这里，尽可能利用 TypeScript 的类型推导非常重要。如果手动指定类型参数，很可能会导致类型不匹配的问题。
