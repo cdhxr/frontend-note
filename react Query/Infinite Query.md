@@ -193,3 +193,103 @@ export default function Blog() {
   )
 }
 ```
+
+如果我们想让按钮更智能一些，可以为它提供一些关于查询状态的元信息。具体来说，
+
+- `isFetchingNextPage` 当下一页的数据正在请求时为 `true`
+- `hasNextPage` 如果还有下一页可以获取，它为 `true`。这通过调用 `getNextPageParam` 来判断，如果返回 `undefined`，就说明没有下一页了。
+
+我们可以利用这两个值来有条件地禁用“更多”按钮，并且在 React Query 获取下一页数据时给它加上加载指示器。
+
+```jsx
+<button
+  onClick={() => fetchNextPage()}
+  disabled={!hasNextPage || isFetchingNextPage}
+>
+  { isFetchingNextPage ? '...' : '更多' }
+</button>
+```
+
+而且，你不必只在一个方向上进行无限查询。到目前为止，我们只看了从开始获取并向前加载更多页的查询——但并不总是这样。
+
+例如，假设你正在构建一个支持深度链接到任何消息的消息应用程序。在这种情况下，用户可能会在对话的中间，需要向前和向后获取消息，以便获取完整的上下文。
+
+幸运的是，向后获取数据的模式与向前获取数据类似，只是使用了更合适的命名值。
+
+例如，`getNextPageParam` 使用 `lastPage`、`allPages` 和 `lastPageParam`，而你将使用 `getPreviousPageParam`，它接受 `firstPage`、`allPages` 和 `firstPageParam`。
+
+```js
+useInfiniteQuery({
+  queryKey,
+  queryFn,
+  initialPageParam,
+  getNextPageParam: (lastPage, allPages, lastPageParam) => {
+    if (lastPage.length === 0) {
+      return undefined;
+    }
+    return lastPageParam + 1;
+  },
+  getPreviousPageParam: (firstPage, allPages, firstPageParam) => {
+    if (firstPageParam <= 1) {
+      return undefined;
+    }
+    return firstPageParam - 1;
+  }
+});
+```
+
+现在，我知道你在想什么：“这些都不错，但还不够上瘾。我希望我的用户大脑变成糊状物，他们不由自主地在我的应用上滚动，这样我可以最大化广告收入。”
+
+不用担心，这个功能也不难实现。
+对于这个功能，你并不需要了解与 React Query 相关的任何新知识。
+相反，它只需要在用户滚动到列表底部时触发 `fetchNextPage`。
+
+为此，我们可以利用 `useHooks` 的 `useIntersectionObserver` 钩子。
+
+```jsx
+import { useIntersectionObserver } from "@uidotdev/usehooks";
+
+...
+
+const [ref, entry] = useIntersectionObserver();
+```
+
+当与 `ref` 关联的元素进入视图时，`entry.isIntersecting` 将变为 `true`。
+结合一些 `useEffect` 的魔法，我们可以在用户滚动到列表底部时触发 `fetchNextPage`。
+
+```js
+export default function Blog() {
+  const { status, data, fetchNextPage, hasNextPage, isFetchingNextPage } = usePosts()
+
+  const [ref, entry] = useIntersectionObserver();
+
+  React.useEffect(() => {
+    if (entry?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage()
+    }
+  }, [entry?.isIntersecting, hasNextPage, isFetchingNextPage])
+
+  if (status === 'pending') {
+    return <div>...</div>
+  }
+
+  if (status === 'error') {
+    return <div>Error fetching posts</div>
+  }
+
+  return (
+    <div>
+      {data.pages.flat().map((post, index, pages) => (
+        <p key={post.id}>
+          <b>{post.title}</b>
+          <br />
+          {post.description}
+          {index === pages.length - 3
+              ? <div ref={ref} />
+              : null}
+        </p>
+      ))}
+    </div>
+  )
+}
+```
