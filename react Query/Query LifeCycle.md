@@ -44,7 +44,7 @@ Those statuses directly correspond to the state a `Promise` can be in - `pend
 
 # 访问`status`的方法
 
-首先要在useQuery拿来的prop中加上status
+首先要在useQuery拿来的prop中加上statu
 
 You have two options for accessing the `status` of the query.
 
