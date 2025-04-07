@@ -57,4 +57,64 @@ axios实现：
 - 利用请求拦截器语法，统一为请求加入头信息配置
 - 利用响应拦截器语法，请求成功时（利用状态），自动续期返回结果后，重新请求，请求返回结果后，将结果return
 	- 自动续期逻辑：
-		- 如果Refresh token存在，则将Refresh token取出，作为
+		- 如果Refresh token存在，则将Refresh token取出，作为参数发给后端， 让后端返回新的accessToken,更新accessToken
+
+
+
+
+
+
+```pgsql
+[浏览器注册]
+ └── POST /auth/register
+       └── 注册成功后自动登录（可选）→ 继续执行 login 流程
+
+[浏览器登录]
+ └── POST /auth/login
+       ├── 返回 accessToken -> localStorage
+       └── 设置 refreshToken Cookie (HttpOnly)
+
+[发请求时]
+ └── fetchWithAuth
+       └── Authorization: Bearer accessToken
+
+[accessToken 失效 → 自动 refresh]
+ └── POST /auth/refresh
+       ├── 自动携带 Cookie (HttpOnly refreshToken)
+       ├── 成功 → 返回新 accessToken -> 更新 localStorage
+       └── 失败 → Refresh Token 失效 → 强制登出
+
+[Refresh 失效 / 过期]
+ └── 自动刷新失败（401）
+       └── 清除 localStorage
+       └── 提示登录过期
+       └── 重定向到 /login 页面
+
+[浏览器退出登录]
+ └── POST /auth/logout
+       ├── 清除服务端 refreshToken 存储（可选）
+       ├── 返回 200 OK
+       └── 前端删除 accessToken + Cookie（可设置过期）
+
+[用户注销账户]
+ └── DELETE /auth/account
+       ├── 删除用户信息
+       ├── 清除所有 Token
+       └── 返回成功 → 自动登出（调用 logout 流程）
+
+```
+
+
+
+```ts
+async function refreshToken() {
+  const res = await fetch('/auth/refresh', {
+    method: 'POST',
+    credentials: 'include', // ⭐️ 自动携带 Cookie
+  });
+  if (!res.ok) throw new Error('Refresh failed');
+  const data = await res.json();
+  localStorage.setItem('accessToken', data.accessToken);
+  return data.accessToken;
+}
+```
