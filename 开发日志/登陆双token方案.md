@@ -17,7 +17,7 @@ JWT＋Refresh Token如何减少用户中心的压力
 
 
 - 在Refresh Token有效时，accessToken可以无限续，
-- 在Refresh过期了，access也过期了就必须重新登录
+- 在Refresh过期了，access也过期了就必须重新登录，可以将其视为它的限制
 
 - JWT相当于Access Token，应保证其刷新时间短暂，如15min
 - Refresh Token用于换取新的JWT，刷新周期可能是一周或更长，会和用户产生关联，用于标识用户是否认证过了，存在Server端
@@ -38,3 +38,23 @@ Refresh Token的安全：
 - 监控Refresh Token的使用方式：比如设备同时在不同登录地登录，可以进一步要求认证
 
 
+
+
+- 相比单点登录的前端code变化
+
+存放Token:
+```ts
+//原本的实现
+localStorage.setItem("token", res.data);
+//双Token
+localStorage.setItem("accessToken", res.data.accessToken);
+localStorage.setItem("refreshToken", res.data.refreshToken);
+```
+
+自动续期
+
+axios实现：
+- 利用请求拦截器语法，统一为请求加入头信息配置
+- 利用响应拦截器语法，请求成功时（利用状态），自动续期返回结果后，重新请求，请求返回结果后，将结果return
+	- 自动续期逻辑：
+		- 如果Refresh token存在，则将Refresh token取出，作为
