@@ -118,3 +118,9 @@ async function refreshToken() {
   return data.accessToken;
 }
 ```
+
+
+登录请求
+
+确保包含凭证以接收 cookies：   credentials: 'include'
+
