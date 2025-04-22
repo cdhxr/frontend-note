@@ -349,3 +349,25 @@ If you need to know when an animation starts, or maybe run some JS when an anima
 
 在下面的示例中，我们为每个元素创建了一个时间线（这样就不会在所有实例中都触发相同的动画），将时间线的引用附加到元素本身，然后在元素悬停时播放相关的时间线，当鼠标离开时则反向播放。我们还调整了速度，使其在反向时更快，在进入时更慢。这是一种很好的用户体验模式。
 
+# Overwrite Mode
+
+```js
+// Set overwrite on a tween
+gsap.to(".line", { x: 200, overwrite: true });
+
+// Set overwrite globally for all tweens
+gsap.defaults({ overwrite: true });
+
+// Set overwrite for all tweens in a timeline
+const tl = gsap.timeline({ defaults: { overwrite: true } });
+```
+
+|模式|行为描述|
+|---|---|
+|`false`（默认）|不干涉，多个动画可能会冲突并“打架”|
+|`true`|彻底终止同目标的所有旧动画|
+|`"auto"`|**只终止冲突的属性动画**，其他的保留|
+只有那些**和当前动画冲突的部分**会被终止。 举例：如果 `tween1` 在动画 `x` 和 `rotation` 属性，然后 `tween2` 开始对同一个目标的 `x` 进行动画，并且设置了 `overwrite: "auto"`，那么：
+
+- `tween1` 中关于 `rotation` 的动画会继续，
+- 但 `tween1` 中对 `x` 的动画会被停止。
