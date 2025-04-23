@@ -179,3 +179,167 @@ https://reacttraining.com/blog/react-and-form-data
 
 # Why we need React hook form
 
+## 原生使用：
+
+state定义：
+
+```js
+const [email,setEmail]useState("")
+const [password,setPassword]usestate("");
+const [errors,setErrors]useState<{email:string;password:string }>(
+  email:""
+  password:""
+}):
+```
+
+事件处理函数
+
+```js
+const handleSubmit (e:React.FormEvent)=>{
+  e.preventDefault();
+  setErrors({email:""password:"})
+  //Manual validation
+  if (!email.includes("@")){
+    setErrors({...errors,email:"Email must include @})
+    return;
+  }
+  if (password.length 8){
+    setErrors({...errors,password:"Password must be at least 8 chars"})
+    return;
+  }
+  //Form submission
+  console.log("Form submitted");
+};
+```
+
+JSX
+
+```js
+<form className="tutorial gap-2"onSubmit={handleSubmit}>
+  <input
+    .type="text"
+    placeholder="Email"
+	value={email}
+	onChange={(e)=>setEmail(e.target.value)}
+  />
+  {errors.email.&&<div.className="text-red-500">{errors.email}</div>}
+  <input
+	type="password"
+	placeholder="Password"
+	value={password}
+	onChange={(e)=>setPassword(e.target.value)}
+  />
+  {errors.password &<div className="text-red-500">{errors.password}</div>}
+  <button type="submit">Submit</button>
+</form>
+```
+
+
+这样实现的问题是，表单的扩展性不足，即便只是增加一个字段，也需要做很多额外的操作，需要再定义一个State，然后再传入onChange中，放在Error状态中，对其清空，再对处理函数中添加相应的处理，结合网络请求时的异步处理等等。
+
+如果有十个这样的字段，编写代码将会十分困难
+
+## 使用 react hook form
+
+```js
+import { SubmitHandler, useForm } from "react-hook-form";
+import z from "zod";
+const schema z.object({
+  email:z.string().email(), //这是zod内置的校验，相当于为我们写了一个更全面的邮箱校验validate
+  password:z.string().min(8),
+)};
+
+//使用zod转换了原本的类型定义
+type FormFields z.infer<typeof schema>;
+
+//type FormFields = {
+  //email:string;
+  //password:string;
+//};
+```
+
+```js
+const { 
+  register,
+  handleSubmit,  //与提交处理函数绑定
+  setError,    //设置错误信息，可以与后端结合
+  formState:{ errors, isSubmitting }//类似于Query的异步状态管理简化
+}=useForm<FormFields>({
+  //设置默认值的方法
+  defaultValues:{
+    email:"test@email.com"
+  },
+  resolver:zodResovler(schema)//使用zod做解析器与react hook连接
+});
+
+const onSubmit:SubmitHandler<FormFields>= async (data) => {
+  try {
+    await newPromise((resolve) => setTimeout(resolve,1000));
+    console.log(data);
+  }catch(error){
+    //将第一个字段设置为root，则消息属于整个表单
+    setError("email",{
+      message:"this email is already taken",
+    }) 
+  }
+}
+```
+
+```js
+<form className="tutorial gap-2">
+  //邮箱表单
+  <input
+    {...register("email",
+      // 返回字符串，而不是布尔值，作为err
+      // 使用zod后，这也不是required:"Email is required",
+	  //可以用正则表达式，也可以加其他的合法性检测
+	  //pattern:/^[a-z0-9._6+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/,
+
+	  //使用zod简化validate验证,
+	  //这里还需要安装hookform/resolvers 库, Zod库
+	  
+
+	  //validate:(value)=
+	    //if (!value.includes("@")){
+		  //return "Email must-include @";
+	    //}
+	    //return true;
+	  //},
+	})}
+	type="text"
+	placeholder="Email"
+  />
+  
+  {errors.email &&
+    <div className="text-red-500">errors.email.message}</div>
+  )}
+  //密码表单  
+  <input
+	{...register("password",
+	  //同理，zod会为我们检验
+	  //required:"Password is required",
+	  //minLength:{
+	    //value:8,
+	    //message:"Password must have at least 8 characters"
+	  //}
+	)}
+	type="password"
+	placeholder="Password"
+  />
+  
+  {errors.password &&
+    <div className="text-red-500">{errors.password.message}</div>
+  )}
+  
+  <button disabled={isSubmitting} type="submit">
+    {isSubmitting ? "Loading...":"Submit}
+  </button>
+
+  {errors.root &&
+	<div className="text-red-500">{errors.roo.message}</div>
+  }
+</form>
+```
+
+
+
