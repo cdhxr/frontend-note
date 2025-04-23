@@ -371,3 +371,25 @@ const tl = gsap.timeline({ defaults: { overwrite: true } });
 
 - `tween1` 中关于 `rotation` 的动画会继续，
 - 但 `tween1` 中对 `x` 的动画会被停止。
+
+
+# Avoiding FOUC
+
+Have you ever noticed an annoying _"flash of unstyled content"_ (FOUC) when a web page first loads? That happens because browsers render things as quickly as possible, often **BEFORE** your JavaScript executes the first time. So what if some of your initial styles are set via JavaScript...like with GSAP?
+
+解决方案：在 CSS 中对元素应用 visibility: hidden;，然后使用 GSAP 的 autoAlpha 属性在页面加载时显示它（或以动画形式显示）！
+
+# immediateRender
+
+from() 和 fromTo() tweens 比较特殊，因为它们会在创建后立即将 immediateRender 设置为 true。这在创建交错构建时尤其有帮助，因为在交错构建时您不希望元素在计划之前出现。
+
+在同一对象的同一属性上有多个 from()/fromTo() 微调器时，更改默认行为就显得尤为重要。
+
+the default of `immediateRender: true` however can cause problems when creating multiple from() tweens on the same properties of the same element.
+
+Notice in the demo below that you don't see green animate a second time.
+
+
+
+
+

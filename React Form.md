@@ -21,7 +21,26 @@ React 有两种不同的方法来处理表单输入。
 无论哪种方式，最终目的都是收集表单数据。
 
 对于受控表单，您的数据就是您的状态。
-对于非受控表单，您需要自己收集表单值，通常开发人员会为此选择反射：
+对于非受控表单，您需要自己收集表单值，通常开发人员会为此选择ref：
+
+```js
+function onSubmit(event: React.FormEvent) {
+  event.preventDefault()
+
+  // Collect uncontrolled form fields with refs. The refs are
+  // giving us direct access to the input fields in the DOM
+  const formValues = {
+    name: nameRef.current.value
+    email: emailRef.current.value
+  }
+}
+```
+
+[[ref in react]]
+
+
+
+
 
 
 
