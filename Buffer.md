@@ -39,3 +39,18 @@ console.log(buff.tostring("utf-8"))
 const buff = Buffer.from("Hi!","utf-8");
 console.log(buff);
 ```
+
+# Buffer的不同分配内存的方式
+
+|方法|是否初始化|是否安全（避免旧数据）|是否推荐|用途描述|
+|---|---|---|---|---|
+|`Buffer.alloc(size)`|✅ 是（填充为 0）|✅ 安全|✅ 推荐|默认推荐的方式，保证内容干净|
+|`Buffer.allocUnsafe(size)`|❌ 否（内存未清空）|❌ 不安全（可能含旧数据）|⚠️ 谨慎使用|更快，但可能包含敏感或垃圾数据|
+|`Buffer.allocUnsafeSlow(size)`|❌ 否（同上）|❌ 不安全（但用旧实现）|❌ 几乎不用|和 `allocUnsafe()` 类似，但不会使用内部内存池|
+Node.js（底层是 V8 引擎）在内部维护了一个**固定大小的内存区域**，叫作**Buffer 内存池**。当你频繁分配小块 Buffer（通常 < 8KB）时，为了提高性能，Node.js 会：
+
+- 不每次都调用底层系统 API 分配内存（那样会很慢）
+- 而是从这块 **预分配的大内存池** 中切一小块出来返回
+
+![[Pasted image 20250510204214.png]]
+
