@@ -21,3 +21,21 @@ Buffer就像是一个有很多元素组成的数组，缓冲区大小是固定�
 
 通过Buffer可以直接控制缓冲区中的0和1，这允许了高速的数据操作
 
+```js
+const { Buffer } = require("buffer");
+const buff Buffer.alloc(3);/24 bits 8 =3 bytes
+buff[0]=0x48;
+buff[1]=0x69;
+buff[2]=0x21;
+
+console.log(buff.tostring("utf-8"));  //解码缓冲区
+//输出Hi!
+
+//等价写法
+const buff Buffer.from([0x48,0x69,0x21]);
+console.log(buff.tostring("utf-8"))
+
+//逆向的操作
+const buff = Buffer.from("Hi!","utf-8");
+console.log(buff);
+```
