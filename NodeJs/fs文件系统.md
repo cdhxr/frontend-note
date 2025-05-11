@@ -77,4 +77,58 @@ fs.copyFileSync("command.txt", "copied-sync.txt"); // 阻塞式复制
 
 基本上用的都是Promise API
 
-# 
+# project
+
+## 异步迭代器
+
+**`async function*`** 声明创建一个[绑定](https://developer.mozilla.org/zh-CN/docs/Glossary/Binding)到给定名称的新异步生成器函数。
+
+产生一个异步可迭代对象，可以异步的迭代
+
+```js
+async function* foo() {
+  yield 1;
+  yield 2;
+}
+
+(async function () {
+  for await (const num of foo()) {
+    console.log(num);
+    // Expected output: 1
+
+    break; // Closes iterator, triggers return
+  }
+})();
+```
+
+遍历async iterable object ( 异步的返回数据的对象 )
+
+## fs module
+### `fs.watch(filename[, options][, listener])`
+
+#### history
+
+- **filename**：`<string>` | `<Buffer>` | `<URL>`  
+    要监听的文件或目录的路径。
+    
+- **options**：`<string>` | `<Object>`  
+    可选参数。如果是字符串，则表示编码方式。如果是对象，可以设置以下字段：
+    
+    - **persistent**：`<boolean>`  
+        是否在监听文件时保持 Node.js 进程持续运行。默认值是 `true`。
+    - **recursive**：`<boolean>`  
+        是否递归地监听所有子目录（仅当监听的是目录时有效，并且仅在部分平台上受支持，具体见注意事项）。默认值是 `false`。
+    - **encoding**：`<string>`  
+        指定传给回调函数的文件名所用的字符编码。默认是 `'utf8'`。
+    - **signal**：`<AbortSignal>`  
+        允许通过 `AbortSignal` 来关闭返回的监听器。
+    
+- **listener**：`<Function>` | `undefined`  
+    可选的回调函数，默认值是 `undefined`。
+
+
+返回一个 `<fs.FSWatcher>` 实例，用于监听变化。
+- 值类似于：`{eventType:'change',filename:'command.txt'}`
+- 分别为变化的类型，和发生变化的文件
+
+一旦指定的路径中的内容发生变化，`<fs.FSWatcher>` 实例的值就会改变
