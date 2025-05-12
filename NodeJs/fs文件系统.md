@@ -132,3 +132,120 @@ async function* foo() {
 - 分别为变化的类型，和发生变化的文件
 
 一旦指定的路径中的内容发生变化，`<fs.FSWatcher>` 实例的值就会改变
+
+```js
+const fs = require("fs/promises")
+
+(async =>{
+  const watcher = fs.watch("./command.txt")
+
+  for await (const event of watcher) {
+    if (event.eventType === "change") {
+      console.log("The file was changed")
+    }
+  }
+})();
+```
+
+
+读取文件
+
+- 先打开，再读写
+- open(file descriptor), 并没有移动所有内容进入mem，只将file descriptor移动了
+- file descriptor 是一个number
+
+```js
+const fs = require("fs/promises")
+
+(async =>{
+  const watcher = fs.watch("./command.txt")
+  
+  const commandFileHandler await fs.open("./command.txt","r")
+  
+  for await (const event of watcher) {
+    if (event.eventType === "change") {
+      console.log("The file was changed")
+    }
+    // get the size of our file
+    const size = (await commandFileHandler.stat()).size;
+    const buff = Buffer.alloc(size);
+
+    const offset = 0;
+    const length = buff.byteLength;
+    const position = 0;
+
+    const content = await commandFileHandler.read(
+       buff,
+       offset,
+       length,
+       position
+    );
+    
+    console.log(buff.tostring ("'utf-8"));
+    console.log(content);
+  }
+})();
+```
+
+通过stat返回的对象，得到文件大小，已创建大小合适的Buffer
+指定position和offset以正确的读取文件
+
+- **`buff`（Buffer）**
+    
+    - 用于接收从文件中读取的数据。
+    - 是通过 `Buffer.alloc(size)` 创建的，大小为文件的总字节数。
+    
+- **`offset`（number）**
+    
+    - 表示从 `buff` 的哪个字节位置开始写入数据。这里是 `0`，即从 buffer 的起始位置开始写入。
+    
+- **`length`（number）**
+    
+    - 表示要读取多少字节的数据，这里是 `buff.byteLength`，即读取整个文件大小的数据。
+    
+- **`position`（number | null）**
+    
+    - 表示从文件的哪个字节位置开始读取数据。这里是 `0`，意味着从文件开头开始读取。
+    - 如果是 `null`，则从当前文件指针位置开始读取（对于流式读取时更常见）。
+
+
+NodeJS只能处理字符编码和解码，不能处理视频或者图片（除非引入了第三方包）
+
+用事件循环来写出更好的代码
+```js
+(async () => {
+  const commandFileHandler = await fs.open("./command.txt", "r");
+
+  commandFileHandler.on("change", async () => {
+    // get the size of our file
+    const size = (await commandFileHandler.stat()).size;
+    // allocate our buffer with the size of the file
+    const buff = Buffer.alloc(size);
+    // the location at which we want to start filling our buffer
+    const offset = 0;
+    // how many bytes we want to read
+    const length = buff.byteLength;
+    // the position that we want to start reading the file from
+    const position = 0;
+
+    // we always want to read the whole content (from beginning all the way to the end)
+    const content = await commandFileHandler.read(
+      buff,
+      offset,
+      length,
+      position
+    );
+
+    console.log(content);
+  });
+
+  //watcher...
+  const watcher fs.watch("./command.txt");
+  for await (const event of watcher){
+    if (event.eventType ==="change"){
+      commandFileHandler.emit("change");
+    }
+  }
+})();
+
+```
