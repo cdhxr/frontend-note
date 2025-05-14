@@ -101,6 +101,50 @@ fs.createReadStream('input.txt')
 - 填满后，得到一个事件，事件名是data，一填满就得到一个新的事件
 - 对于一个大的数据的Write，我们应该先通过readable Stream将其分块，再放入Writable Stream进行写操作
 
+```js
+  streamRead.on("data", (chunk) => {
+    if (!streamWrite.write(chunk)) {
+      streamRead.pause();
+    }
+  });
+```
+
+- 监听 "data" 事件，每当读取到一块数据（chunk）：
+- 把数据写入写入流:如果写入返回 false，说明写入缓冲区满了（不能继续写），就暂停读取流以避免内存占用增加。
+
+
+
+
 ## Duplex and Transform
 
 他们有两个internal Buffer，相当于上面两个的组合版
+
+# Drain event
+
+当stream.write(buff)返回false时，说明需要先清空internal buffer，在其返回false时，应该立刻清空Buffer，不该继续write，否则会造成可怕的问题
+
+```javascript
+stream.on("drain", () => {
+  console.log("We are now safe to write more!");
+});
+```
+
+---
+
+### 解释：
+
+- `stream.on("drain", ...)`：  
+    表示当 `stream` 的缓冲区排空时，触发 `"drain"` 事件。
+
+- `() => { ... }` 是箭头函数，表示我们传入的回调函数。
+- `console.log(...)`：在控制台输出一句话。
+
+---
+
+### 什么是 `"drain"` 事件？
+
+当你使用 `stream.write(data)` 写入数据时，如果返回 `false`，表示内部缓冲区已满。你需要等 `"drain"` 事件触发后再继续写入。`"drain"` 事件触发，也意味着已满的内部缓冲区被释放
+
+也就是说，这个事件**告诉你可以继续写数据了**。
+
+

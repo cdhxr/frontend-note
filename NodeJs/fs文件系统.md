@@ -135,7 +135,7 @@ async function* foo() {
 
 ```js
 const fs = require("fs/promises")
-
+//immediately invoked function
 (async =>{
   const watcher = fs.watch("./command.txt")
 
