@@ -102,22 +102,23 @@ fs.createReadStream('input.txt')
 - 对于一个大的数据的Write，我们应该先通过readable Stream将其分块，再放入Writable Stream进行写操作
 
 ```js
+//通过read流，读数据，放入write流，写数据
+//数据量大时，避免内存的占用，使用pause，resume机制优化
+
   streamRead.on("data", (chunk) => {
     if (!streamWrite.write(chunk)) {
       streamRead.pause();
     }
   });
+
+  streamWrite.on("drain", () => {
+    streamRead.resume();
+  });
 ```
 
 - 监听 "data" 事件，每当读取到一块数据（chunk）：
 - 把数据写入写入流:如果写入返回 false，说明写入缓冲区满了（不能继续写），就暂停读取流以避免内存占用增加。
-
-
-
-
-## Duplex and Transform
-
-他们有两个internal Buffer，相当于上面两个的组合版
+- drain事件被监听到时，意味着writeBuffer被清空，这时再resume Readable Stream继续读
 
 # Drain event
 
@@ -147,4 +148,124 @@ stream.on("drain", () => {
 
 也就是说，这个事件**告诉你可以继续写数据了**。
 
+## Duplex and Transform
 
+他们有两个internal Buffer，相当于上面两个的组合版
+
+
+# Duplex Stream 和 Transform Stream
+
+![[Pasted image 20250514132309.png]]
+
+Duplex仅仅是内部有两个Buffer并且彼此是不相关的
+
+![[Pasted image 20250514132432.png]]如果数据流像是这样，其实就是Transform Stream了，虽然可以在Read前对数据进行转换，也可以不加工
+
+# pipe
+
+事实上就是对上述读写时，pause，resume的封装
+
+在 Node.js 中，`pipe` 和 `pipeline` 都是用于连接多个 **流（Stream）** 的工具，它们能实现 **数据的自动传输和背压控制**，但用法、适用场景、稳定性略有不同。
+
+---
+
+## 📌 一、`stream.pipe()` 简介
+
+### ✅ 基本用法：
+
+```js
+readableStream.pipe(writableStream);
+```
+
+它的作用是：
+
+- **自动读取** `readableStream` 的数据，
+    
+- 并 **自动写入** `writableStream`，
+    
+- 同时 **自动处理背压（backpressure）**。
+    
+
+### 🌊 示例：
+
+```js
+const fs = require('fs');
+
+const readStream = fs.createReadStream('input.txt');
+const writeStream = fs.createWriteStream('output.txt');
+
+readStream.pipe(writeStream);
+```
+
+这个代码会将 `input.txt` 的内容流式写入 `output.txt`。
+
+### 🧠 特点：
+
+|优点|缺点|
+|---|---|
+|简洁、语法短|错误处理麻烦（每个流都要单独加 `.on('error', ...)`）|
+|自动处理背压|多个流组合时容易混乱|
+
+---
+
+## 📌 二、`stream.pipeline()` 简介（推荐）
+
+Node.js v10.0 引入的 `stream.pipeline` 是对 `.pipe()` 的封装，**更安全、更现代**。
+
+### ✅ 用法：
+
+```js
+const { pipeline } = require('stream');
+const fs = require('fs');
+
+pipeline(
+  fs.createReadStream('input.txt'),
+  fs.createWriteStream('output.txt'),
+  (err) => {
+    if (err) {
+      console.error('Pipeline failed.', err);
+    } else {
+      console.log('Pipeline succeeded.');
+    }
+  }
+);
+```
+
+### 🧠 特点：
+
+|特性|说明|
+|---|---|
+|自动传播错误|所有流的错误集中在一个回调处理|
+|更健壮|不会出现未捕获的异常导致程序崩溃|
+|支持 async/await|可以与 `promisify` 一起使用|
+
+```js
+const { pipeline } = require('stream/promises');
+await pipeline(readable, transform, writable);
+```
+
+---
+
+## 🔍 `pipe` vs `pipeline` 对比总结
+
+|特性|`pipe()`|`pipeline()`|
+|---|---|---|
+|写法|简洁|稍复杂|
+|错误处理|手动处理每个流|自动统一处理|
+|背压支持|支持|支持|
+|推荐程度|小型、简单场景可用|🚀 **推荐用于生产环境**|
+
+---
+
+## ✅ 什么时候用哪个？
+
+- 👉 **简单任务**：复制文件、解压缩等简单流操作 → 用 `pipe()`
+    
+- ✅ **复杂任务/生产代码**：需要多个流（如解密 → 解压 → 写入），或你关心可靠性 → 用 `pipeline()`
+    
+
+---
+
+如果你在开发自己的命令行工具、构建流式数据处理系统，比如视频转码、日志处理、代理中转等，用 `pipeline()` 几乎总是更好。
+
+需要例子（比如用 pipeline 压缩文件、用 transform 处理数据）我也可以马上写一个给你。
