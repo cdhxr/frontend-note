@@ -97,3 +97,11 @@ OSI 七层模型            TCP/IP 四层模型           主要协议/功能
 了解IP地址
 
 that's enough
+
+# TCP和UDP
+
+- TCP保证所有数据完整不变的被发送
+- UDP用于保证传输的速度，在传输视频图像声音等等信息时，我们通常不在意小部分的数据丢失
+- NodeJs中有两个模块对应这两个部分，Net模块对应着TCP应用，datagram对应UDP
+
+
