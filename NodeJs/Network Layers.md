@@ -105,3 +105,19 @@ that's enough
 - NodeJs中有两个模块对应这两个部分，Net模块对应着TCP应用，datagram对应UDP
 
 
+白色部分是TCP headers，和蓝色部分数据一起组成一个segement
+
+![[Pasted image 20250515144646.png]]
+
+|步骤|机制名称|保证内容|说明|
+|---|---|---|---|
+|1️⃣|**序列号（Sequence Number）**|顺序编号|每个 TCP 报文带编号，确保数据“顺序可识别”|
+|2️⃣|**确认号（Acknowledgement Number）**|收到反馈|接收方告诉发送方“我收到哪一部分了”|
+|3️⃣|**超时重传（Retransmission）**|补发丢包|若 ACK 超时未到，自动重发丢失的那段数据|
+|4️⃣|**校验和（Checksum）**|检测错误|检查内容有没有在传输中损坏（位反转、损坏等）|
+|5️⃣|**重排序（Reordering）**|顺序恢复|数据乱序到达时，先缓存，再按序交给应用层|
+|6️⃣|**流量控制（Flow Control）**|接收能力保护|接收方告诉发送方“我还能接多少”，用窗口控制|
+|7️⃣|**拥塞控制（Congestion Control）**|网络保护|检测网络是否拥塞，动态控制发送速率|
+
+UDPsegement结构
+![[Pasted image 20250515145930.png]]
