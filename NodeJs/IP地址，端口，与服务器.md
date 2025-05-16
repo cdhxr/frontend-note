@@ -1,10 +1,35 @@
 # simple tcp server
 
+客户端代码（client.js）：
+
 ```js
+const net = require("net");
+
+const socket = net.createConnection({ host: "127.0.0.1", port: 3099 }, () => {
+    const buff = Buffer.alloc(8); // 创建长度为 8 的缓冲区
+    buff[0] = 12;
+    buff[1] = 34;
+    socket.write(buff); // 向服务器发送数据
+});
 
 ```
 
+服务端代码（server.js）：
 
+```js
+const net = require("net");
+
+const server = net.createServer((socket) => {
+    socket.on("data", (data) => {
+        console.log("接收到数据:", data); // 打印接收到的数据 Buffer
+    });
+});
+
+server.listen(80, "127.0.0.1", () => {
+    console.log("opened server on", server.address());
+});
+
+```
 
 
 
