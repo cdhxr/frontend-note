@@ -62,7 +62,7 @@ http中必须要等到request才能response，有请求，才能向客户端发�
 - content-length，即**0d 0a 0d 0a**后的content-length是Http请求body
 - 指定content-length后，会在收到响应字节的数据时才会结束请求（触发end事件）
 
-## 使用net Module发送Http请求
+## 使用net Module的client发送Http请求
 
 通过wireshark，将header，body以及分隔符等等的package完整的十六进制数据复制下来
 
@@ -71,3 +71,6 @@ http中必须要等到request才能response，有请求，才能向客户端发�
 这说明了Http Module某种意义上基于net Module，结合Http协议封装成为了net Module
 
 Http Module帮助我们解析这个16进制字符串，告诉我们，哪里是header哪里是body这就是Http模块的作用，其他底层的工作都是net Module做到的
+
+## 使用net Module的Server接收Http请求
+
