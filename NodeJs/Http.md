@@ -45,4 +45,29 @@ http中必须要等到request才能response，有请求，才能向客户端发�
 - 因为设置的普遍性，上述的两个header在http2和http3时不再被采用，变为default设置
 
 
-# 
+# Http Moudule可以在net module基础上构建
+
+## 发送Http请求时发生了什么
+
+- 使用synchronous number（确保连接被建立，确保断点存在，允许发送数据）建立TCP连接
+- TCP window update（滑动窗口更新），会先进行滑动窗口的扩张，增大数据吞吐量，直到阈值
+...
+等等建立TCP连接的操作
+
+- Http请求package，包括header，body，JSON数据等等完整的request
+- TCP确保数据被正确传输
+- Http响应package
+
+- Http通过 **0d 0a 0d 0a** ....来作为特殊的分界符号，区分header和body部分
+- content-length，即**0d 0a 0d 0a**后的content-length是Http请求body
+- 指定content-length后，会在收到响应字节的数据时才会结束请求（触发end事件）
+
+## 使用net Module发送Http请求
+
+通过wireshark，将header，body以及分隔符等等的package完整的十六进制数据复制下来
+
+直接通过net module创建的client中的Socket.write写入对应的十六进制字符串，可以在wireshark中得到完全一样的结果
+
+这说明了Http Module某种意义上基于net Module，结合Http协议封装成为了net Module
+
+Http Module帮助我们解析这个16进制字符串，告诉我们，哪里是header哪里是body这就是Http模块的作用，其他底层的工作都是net Module做到的
