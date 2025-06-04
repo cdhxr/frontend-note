@@ -136,17 +136,17 @@ Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
 
 ## 🎯 三、常见 Content-Type 类型举例
 
-|Content-Type|用途说明|
-|---|---|
-|`text/plain`|纯文本|
-|`text/html`|HTML 文档|
-|`text/css`|CSS 样式表|
-|`application/javascript`|JavaScript 脚本|
-|`application/json`|JSON 格式的数据|
-|`application/xml`|XML 格式的数据|
-|`application/x-www-form-urlencoded`|表单默认提交格式（键值对）|
-|`multipart/form-data`|表单上传文件时使用的格式|
-|`application/octet-stream`|任意二进制数据，常用于文件下载|
+| Content-Type                        | 用途说明            |
+| ----------------------------------- | --------------- |
+| `text/plain`                        | 纯文本             |
+| `text/html`                         | HTML 文档         |
+| `text/css`                          | CSS 样式表         |
+| `application/javascript`            | JavaScript 脚本   |
+| `application/json`                  | JSON 格式的数据      |
+| `application/xml`                   | XML 格式的数据       |
+| `application/x-www-form-urlencoded` | 表单默认提交格式（键值对）   |
+| `multipart/form-data`               | 表单上传文件时使用的格式    |
+| `application/octet-stream`          | 任意二进制数据，常用于文件下载 |
 
 ---
 
@@ -188,17 +188,6 @@ Content-Type: image/png
 
 ---
 
-## 🛠 五、服务端处理时的作用？
-
-在后端，比如用 Node.js、Java、Python 等写接口时，会根据 `Content-Type` 决定：
-
-- 使用哪种解析器（parser）来处理请求体
-    
-- 如何响应前端（返回什么格式）
-    
-
----
-
 ## ✅ 总结一句话：
 
 > `Content-Type` 就像是告诉服务器或浏览器：“嘿，我这段内容是某种格式的，请按这个格式来理解我！”
@@ -227,4 +216,18 @@ Content-Type: image/png
 - Post，为了创建资源或者执行某个action，有请求body和响应body，并不幂等
 	- 你可以使用Post请求，执行幂等的操作，但那种情况，应该使用Put或者PATCH
 - HEAD，只用来得到header
-- OPTIONS，  
+- OPTIONS 
+
+# HTTP STATUS CODE
+
+only use for responses
+we
+100~599
+
+- 100~199：informational responses
+- 200~299：sucessful response
+- 300~399：for redirection，请求重定向
+- 400~499：client errors，
+- 500~599：Server errors，发送了东西但无法处理
+
+不要为所有错误都分配500的错误，区分400和500可以更好的确定请求失败是因为前端还是后端，最好使用规范中更有描述性的code
