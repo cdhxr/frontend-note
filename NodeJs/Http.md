@@ -47,6 +47,8 @@ http中必须要等到request才能response，有请求，才能向客户端发�
 
 # Http Moudule可以在net module基础上构建
 
+Http就是建立了一个TCP连接然后进行了数据的传输，也可以构建在UDP上（比如Http3）
+
 ## 发送Http请求时发生了什么
 
 - 使用synchronous number（确保连接被建立，确保断点存在，允许发送数据）建立TCP连接
@@ -74,4 +76,155 @@ Http Module帮助我们解析这个16进制字符串，告诉我们，哪里是h
 
 ## 使用net Module的Server接收Http请求
 
+可以使用PostMan向net.Server创建的服务器发送消息，可以接受到header和body，
 
+但是在PostMan得到相同的信息是比较困难的，需要自己实现对**0d 0a 0d 0a** 这些分隔符的解析逻辑，不像Http模块可以轻易做到这一点，在net Module中需要自己实现
+
+这也是Http被称为明文协议的原因，我们总是可以接受到意义的信息，这也带来一些安全问题，比如Nextjs最近的安全事件，但我们也可以对其进行加密
+
+
+# MIME TYPE
+
+在 HTTP 协议中，`Content-Type` 是一个非常重要的头字段（Header），它用来告诉服务器或客户端：
+
+> **这个 HTTP 消息体（body）中的内容属于哪种类型（格式）？**
+
+---
+
+## 🧩 一、`Content-Type` 是什么？
+
+`Content-Type` 通常用于 `HTTP 请求` 或 `响应` 中，指定消息体的数据类型，也被称为 **MIME 类型（Media Type）**。
+
+**基本格式：**
+
+```
+Content-Type: <媒体类型>/<子类型>; charset=<字符集>
+```
+
+例如：
+
+```
+Content-Type: text/html; charset=UTF-8
+Content-Type: application/json
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
+```
+
+---
+
+## 📦 二、什么是 Media Type（MIME 类型）？
+
+**Media Type** 是一种标准，用来标识文件的内容类型，它最初用于电子邮件，现在在 HTTP 中广泛使用。
+
+它由两个部分组成：
+
+```
+主类型 / 子类型
+```
+
+### 常见主类型有：
+
+|主类型|说明|
+|---|---|
+|`text`|文本格式，如 `text/html`|
+|`image`|图片格式，如 `image/png`|
+|`audio`|音频格式，如 `audio/mpeg`|
+|`video`|视频格式，如 `video/mp4`|
+|`application`|应用数据，如 `application/json`|
+|`multipart`|多部分数据，如表单上传|
+
+---
+
+## 🎯 三、常见 Content-Type 类型举例
+
+|Content-Type|用途说明|
+|---|---|
+|`text/plain`|纯文本|
+|`text/html`|HTML 文档|
+|`text/css`|CSS 样式表|
+|`application/javascript`|JavaScript 脚本|
+|`application/json`|JSON 格式的数据|
+|`application/xml`|XML 格式的数据|
+|`application/x-www-form-urlencoded`|表单默认提交格式（键值对）|
+|`multipart/form-data`|表单上传文件时使用的格式|
+|`application/octet-stream`|任意二进制数据，常用于文件下载|
+
+---
+
+## 🧠 四、开发中如何用？
+
+### 1. 前端发送 JSON：
+
+```http
+POST /api
+Content-Type: application/json
+
+{
+  "name": "chatgpt"
+}
+```
+
+### 2. 表单提交（默认）：
+
+```http
+POST /submit
+Content-Type: application/x-www-form-urlencoded
+
+username=tom&password=1234
+```
+
+### 3. 文件上传（带边界的 multipart）：
+
+```http
+POST /upload
+Content-Type: multipart/form-data; boundary=----ABC123
+
+------ABC123
+Content-Disposition: form-data; name="file"; filename="img.png"
+Content-Type: image/png
+
+<binary data>
+------ABC123--
+```
+
+---
+
+## 🛠 五、服务端处理时的作用？
+
+在后端，比如用 Node.js、Java、Python 等写接口时，会根据 `Content-Type` 决定：
+
+- 使用哪种解析器（parser）来处理请求体
+    
+- 如何响应前端（返回什么格式）
+    
+
+---
+
+## ✅ 总结一句话：
+
+> `Content-Type` 就像是告诉服务器或浏览器：“嘿，我这段内容是某种格式的，请按这个格式来理解我！”
+
+
+# HTTP Methods
+
+## idempotent 幂等性
+
+即多次操作不会造成与第一次执行之外的影响，即只有第一次调用有用，接下来几次都不会有任何影响
+
+## methods
+
+| 方法名       | 作用描述          | 是否安全 | 是否幂等 | 是否有请求体 | 是否有响应体 |
+| --------- | ------------- | ---- | ---- | ------ | ------ |
+| `GET`     | 获取资源          | ✅ 是  | ✅ 是  | ❌ 否    | ✅ 是    |
+| `POST`    | 提交数据创建资源      | ❌ 否  | ❌ 否  | ✅ 是    | ✅ 是    |
+| `PUT`     | 更新整个资源（或创建）   | ❌ 否  | ✅ 是  | ✅ 是    | ✅ 可选   |
+| `PATCH`   | 局部更新资源        | ❌ 否  | ✅可能  | ✅ 是    | ✅ 可选   |
+| `DELETE`  | 删除资源          | ✅ 可选 | ✅ 是  | ✅ 可选   | ✅ 可选   |
+| `HEAD`    | 获取资源的头部（无响应体） | ✅ 是  | ✅ 是  | ❌ 否    | ❌ 否    |
+| `OPTIONS` | 查询服务器支持哪些方法   | ✅ 是  | ✅ 是  | ❌ 否    | ✅ 可选   |
+|           |               |      |      |        |        |
+
+- get，为了request，没有请求体（body），是幂等的
+- Post，为了创建资源或者执行某个action，有请求body和响应body，并不幂等
+	- 你可以使用Post请求，执行幂等的操作，但那种情况，应该使用Put或者PATCH
+- HEAD，只用来得到header
+- OPTIONS，  
