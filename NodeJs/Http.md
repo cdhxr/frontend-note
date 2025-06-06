@@ -362,5 +362,27 @@ TCP是有状态的，会记住source和destination，会keep两者的Socket和�
 
 - 如果客户端只是一个nodejs client，可以存储在文件中，使用fs module
 - 如果客户端是浏览器呢？（很普遍的一种情况）
+
 # HTTP COOKIES
+
+如果收到了Cookie，客户端会在后续请求中自动携带这些数据返回服务器。
+
+Cookie 是浏览器“自动记住的一张小纸条”，服务器交给它保存，下次访问就带回来。
+
+- 服务器通过，setCookie是用于设置Cookie的header，发送给client
+- client会将Cookie保存在disk中，在后续的请求会自动携带一个Cookie header
+- 不同的Cookie会通过；间隔，多个Cookie会在同一个header中被传输
+- cookie header只用于request，set-cookie header只用于response
+- cookie header可以设置多个值，set-cookie header只能设置一个值
+
+| 属性                    | 说明                                                   |
+| --------------------- | ---------------------------------------------------- |
+| `Name=Value`          | 关键内容：键值对                                             |
+| `Expires` 或 `Max-Age` | 设定 Cookie 生命周期                                       |
+| `Path`                | 指定哪些路径可以带上这个 Cookie                                  |
+| `Domain`              | 指定哪些域名可访问这个 Cookie                                   |
+| `HttpOnly`            | 只能在 HTTP 请求中使用，JavaScript 无法访问，防止 XSS 攻击             |
+| `Secure`              | 只在 HTTPS 连接中传输                                       |
+| `SameSite`            | 控制是否允许跨站点发送 Cookie（应对 CSRF）值可为：`Strict`、`Lax`、`None` |
+也有一些Cookie的替代，比如localStorage和indexdb类似的web API，这是前端的话题
 
