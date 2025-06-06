@@ -232,29 +232,3 @@ we
 
 不要为所有错误都分配500的错误，区分400和500可以更好的确定请求失败是因为前端还是后端，最好使用规范中更有描述性的code
 
-# web Server
-
-之前用net模块创建过Server，用HTTP模块创建过Server，但是这些Server都不能被称为Web Server
-
-
-![[Pasted image 20250604195935.png]]
-
-
-webServer，必须要是处理htmL，css，js，web api，创建在HTTP上的Server
-
-没有这些你也可以创建一些只处理JSON的HTTP服务器，用于创建iOS或者desktop application，但那与web无关
-
-`console.log(request.method, request.url);`
-
-访问浏览器的某个URL时，比如访问http://localhost:9000/
-- Method：`get`，
-- URL：`/`
-事实上是在发送一个GET request，根据URL参数返回响应的HTML
-
-访问google.com就是发送一个GET request和URL参数，到Google的server
-
-
-浏览器打开HTML文件时，会将其包括的所有文件和链接等资源都进行查找，如果其指向不同的域名，那么他将向其他host发送请求得到资源
- 
-
-
