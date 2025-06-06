@@ -232,3 +232,123 @@ we
 
 不要为所有错误都分配500的错误，区分400和500可以更好的确定请求失败是因为前端还是后端，最好使用规范中更有描述性的code
 
+# HTTP Proxies
+
+多个服务器运行相同的程序十分普遍，这样可以分摊流量，可以避免因单一服务器瘫痪，使整个应用瘫痪的风险
+
+许多client的流量如何被分配？
+
+这些clients会先发到HTTP proxy（有自己的一个IP地址）
+
+**HTTP Proxy（HTTP代理）** 是介于客户端（如浏览器）与服务器之间的一个中间服务器，它接受客户端的 HTTP 请求，将其转发给目标服务器，然后将服务器的响应再转发回客户端。
+
+分配流量的场景，这个proxy被称作Load Balancer
+
+LoadBalancer往往是经过检验的，安全的服务器，而一般的Server在推出一个新功能时，很容易因为不确定性因素影响
+
+HTTP Proxy还有其他应用场景，比如block一些恶意请求等，所以可能存在LoadBalancer与clients之间还有一层HTTP proxy的情况
+
+这个Proxy使用HTTP 3（基于UDP），因为客户端和proxy的距离可能很远，对速度有更高的要求，而服务器和服务器之间往往是集中管理，用稳定光纤传输，所以即使用HTTP 1也可以
+
+```js
+const http = require("http");
+
+// The proxy's port
+const PORT = 9000;
+
+// List of our backend servers
+const mainServers = [
+  { host: "localhost", port: 9001 },
+  { host: "localhost", port: 9002 },
+];
+
+// Create the proxy server
+const proxy = http.createServer();
+
+proxy.on("request", (clientRequest, proxyResponse) => {
+  // Select a server to route the incoming request to (using round-robin algorithm)
+  const mainServer = mainServers.shift();
+  mainServers.push(mainServer);
+
+  // The request that we are sending to one of our main servers
+  const proxyRequest = http.request({
+    host: mainServer.host,
+    port: mainServer.port,
+    path: clientRequest.url,
+    method: clientRequest.method,
+    headers: clientRequest.headers,
+  });
+
+  // Once we receive a response from one of our main servers
+  proxyRequest.on("response", (mainServerResponse) => {
+    // Set the status code and headers for the response that we are sending to the client
+    proxyResponse.writeHead(
+      mainServerResponse.statusCode,
+      mainServerResponse.headers
+    );
+
+    // Finally write the body of the main server's response to the body of proxy's response
+    // and send the response to the client
+    mainServerResponse.pipe(proxyResponse);
+  });
+
+  // Write the body of the client's request to the body of proxy's request being sent
+  // to one of our servers
+  clientRequest.pipe(proxyRequest);
+});
+
+proxy.listen(PORT, () => {
+  console.log(`Proxy server is running on port ${PORT}`);
+});
+```
+
+这个程序的作用是：
+
+- 监听本地端口 `9000`；
+- 使用 **轮询算法 (Round-Robin)** 把客户端的请求转发给 `localhost:9001` 和 `localhost:9002` 两个主服务器之一；
+- 再把主服务器的响应原样返回给客户端。
+
+# HTTP stateless
+
+HTTP的每个请求都是独立处理的，不会保留任何状态或者数据，每一次请求都是独立的，服务器不会记得上一次你做过什么
+
+每次你访问网页、提交表单，都会发送一个 HTTP 请求。服务器会处理并返回响应，但是：
+
+- **处理完这次请求之后，服务器就“忘记”了你是谁**；
+- 下次请求时，服务器无法通过 HTTP 本身“记住”你是上次来的那个用户。
+
+| 原因     | 解释                          |
+| ------ | --------------------------- |
+| ✅ 简单性  | 服务器只需处理当前请求，不必维护用户状态，逻辑更简单。 |
+| ✅ 扩展性好 | 多个服务器之间不需要共享用户会话状态，方便做负载均衡。 |
+| ✅ 灵活性强 | 用户每次请求都可以独立路由到不同服务器。        |
+### 举个栗子 🌰
+
+你打开电商网站，做了这些事：
+
+1. 访问主页（GET `/`）
+2. 登录账号（POST `/login`）
+3. 访问购物车（GET `/cart`）
+    
+
+对于服务器来说：
+
+- 第1步和第3步毫无关联，除非你主动“提供身份信息”（比如 cookie）；
+- HTTP 本身不会记录“你已经登录”这个状态。
+
+![[Pasted image 20250606114424.png]]
+
+因此，它是不知道你有没有登录过的，那么如何鉴权？
+
+# Token
+
+![[Pasted image 20250606120558.png]]
+
+将Token的作用可以理解为身份证或者学生证，想做什么事，检查证件，只要有他们，就能够允许放行
+
+登录的过程：
+
+- client输入用户密码发送登录请求
+- 到LoadBalancer分配到一个Server，
+- 向数据库服务器发送请求比对用户名密码
+- 成功则生成Token，发送给数据库和客户端
