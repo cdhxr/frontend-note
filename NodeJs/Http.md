@@ -351,4 +351,16 @@ HTTP的每个请求都是独立处理的，不会保留任何状态或者数据�
 - client输入用户密码发送登录请求
 - 到LoadBalancer分配到一个Server，
 - 向数据库服务器发送请求比对用户名密码
-- 成功则生成Token，发送给数据库和客户端
+- 成功则在Server生成Token，发送给数据库和客户端（经过代理）
+- 发送请求时，将header中代着Token，Server访问数据库检查Token
+- 此时，即使被分配到与生成Token不同的Server上也不会有问题，因为是从数据库中检索而不是Server
+- 有效则返回响应数据
+
+TCP是有状态的，会记住source和destination，会keep两者的Socket和状态，事实上可以通过TCP实现鉴权，但是一旦断网或者切换网络，TCP就要重新建立，所以着显然不是一个好的做法
+
+那么客户端如何保存Token呢
+
+- 如果客户端只是一个nodejs client，可以存储在文件中，使用fs module
+- 如果客户端是浏览器呢？（很普遍的一种情况）
+# HTTP COOKIES
+
