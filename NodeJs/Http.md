@@ -386,3 +386,44 @@ Cookie 是浏览器“自动记住的一张小纸条”，服务器交给它保�
 | `SameSite`            | 控制是否允许跨站点发送 Cookie（应对 CSRF）值可为：`Strict`、`Lax`、`None` |
 也有一些Cookie的替代，比如localStorage和indexdb类似的web API，这是前端的话题
 
+# middleware中间件
+
+很多请求都需要一些预先的重复的逻辑，比如权限的确定，鉴权
+
+```js
+const token = req.headers.cookie.split("=")[1];
+
+  const session = SESSIONS.find((session) => session.token === token);
+  if (session) {
+    // the actuall method
+	...
+  } else {
+    res.status(401).json({ error: "Unauthorized" });
+  }
+```
+
+middleware想做的事情是
+
+```js
+// 调用路由指定的方法
+this.routes[req.method.toLowerCase() + req.url](req,res); 
+```
+
+在收到request，调用方法之前，执行一段通用的逻辑
+
+```js
+server.beforeEach((req, res, next) => {
+  // This function will run before every request
+  // You can use it to set headers, log requests, etc.
+  ...
+});
+```
+
+需要设置一个next作为callback函数，因为这里的逻辑通常是一些异步的功能，为了让异步功能按顺序工作
+
+middleware设计了一套，必须调用next才能执行下一个middleware函数的机制，不调用next这个cb就不会调用其他的middleware函数，避免了异步操作的乱序，就类似于async，await
+
+
+
+
+
