@@ -96,3 +96,16 @@ import { PrismaClient } from '@prisma/client';
 export const prisma = new PrismaClient();
 ```
 
+# 请求瀑布
+
+是指请求执行之间需要等待一个请求执行完才能执行下一个请求，、
+这样会对数据进行阻塞，降低了页面渲染的速度
+
+应该出现请求瀑布：即一个请求依赖于另一个请求的完成的场景
+在没有逻辑关系的请求间不应该出现请求瀑布
+
+在 JavaScript 中，你可以使用 `Promise.all()` 或 `Promise.allSettled()` 函数同时发起所有 promises。
+
+同时开始执行所有数据获取操作，这比在瀑布流中等待每个请求依次完成要快。
+
+然而，完全依赖这种 JavaScript 模式有一个缺点：如果有一个数据请求比其他所有请求都慢怎么办？让我们在下一章中继续探讨。
