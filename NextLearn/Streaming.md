@@ -120,3 +120,54 @@ Route groups
 ```
 
 你想给登录和注册页加一个统一的 `layout.tsx`，但不希望影响 `dashboard` 页
+
+loading与page可以被称为页面级别的streaming
+是分成loading和page两个chunk进行加载的
+
+# 组件级别的streaming
+
+同理要使用Suspense来包裹组件
+
+```jsx
+<Suspense fallback={<RevenueChartSkeleton />}> 
+	<RevenueChart /> 
+</Suspense>
+```
+
+在调用子组件这一层，不应该发生阻塞，所以要将Data fetching移至<RevenueChart />内部，而不是在这个主组件fetch然后进行参数传递
+
+# 希望同时渲染多个组件
+
+如果几个组件一个一个的出现可能会在视觉上出现奇怪的效果
+
+我们希望部分组件同时渲染
+
+则可以将几个组件包装至一个组件中，一次性显示组件内部包装所有组件的骨架屏，然后并发的加载数据
+
+```jsx
+//可以将多个Card组件包装进一个Cardwrapper组件中
+
+<Suspense fallback={<CardsSkeleton />}>
+  <CardWrapper />
+</Suspense>
+```
+# suspense边界的抉择
+
+🎯 **如何选择放置 Suspense 边界（Suspense Boundaries）的位置，需要根据页面加载体验、数据优先级和数据依赖来权衡，没有绝对的正确答案。**
+
+- **放置位置取决于：**
+    
+    - 想让用户如何体验页面加载（流式体验顺序）；
+    - 哪些内容更重要，需要优先加载；
+    - 哪些组件依赖数据获取。
+        
+- **不同策略的优缺点：**
+    
+    - 🔄 **整页 Suspense（如 `loading.tsx`）：** 简单统一，但如果有慢组件，整个页面都会延迟。
+    - 🔹 **每个组件都用 Suspense：** 精细控制，但组件会一个个“弹出”，影响视觉连贯性。
+    - 🧩 **分组分区流式加载（staggered effect）：** 需要用 wrapper 组件封装，体验更流畅，但开发更复杂。
+        
+- **推荐做法（但非唯一）：**
+    
+    - 把数据获取逻辑尽可能下沉到实际使用它的组件中；
+    - 再用 Suspense 包裹这些组件，实现**局部异步加载**。
