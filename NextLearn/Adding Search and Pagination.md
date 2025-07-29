@@ -52,3 +52,17 @@
 
 # 通过URL参数实现分页
 
+为searchParames设置Page参数
+
+Page中改为按照page参数fetch
+
+在URL中读取Page参数，作为当前页面currentPage
+
+依旧需要创建`URLSearchParams` 实例，用于对URL进行修改，达到翻页后也能同步URL的目的
+
+返回的地方翻页后的URL，作为翻页组件的点击链接的目标结果，同时将页码反应到新的URL上
+
+到目标地址后，因为URL更新，数据也会重新fetch更新
+
+
+
