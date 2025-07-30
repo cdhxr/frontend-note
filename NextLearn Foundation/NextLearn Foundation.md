@@ -40,6 +40,123 @@ Page文件的路由将会被定义成其父文件夹的名字，直到app为单�
 你可以使用根布局来修改你的 `<html>` 和 `<body>` 标签，并添加元数据
 
 
+
+## 路由Hooks
+
+这些 Hooks 必须在客户端组件（`'use client'`）中使用。
+
+#### 1. `useRouter()`
+
+这是最核心的导航 Hook，用于以编程方式控制路由。它返回一个路由器（router）对象，包含以下常用方法：
+
+-   `router.push(href)`: 导航到新的 URL。会将新条目添加到浏览器的历史记录栈中。
+    ```jsx
+    router.push('/dashboard');
+    ```
+-   `router.replace(href)`: 导航到新的 URL，但**替换**当前的历史记录条目，而不是添加新的。用户点击“后退”按钮将跳过这个页面。常用于登录成功后的跳转。
+    ```jsx
+    router.replace('/dashboard');
+    ```
+-   `router.refresh()`: **刷新当前路由**。这会重新从服务器获取数据（重新运行 Server Components），并更新页面，但**不会丢失客户端状态**（如 `useState` 或输入框内容）。非常适合用于在数据变更后（如提交表单）更新页面。
+    ```jsx
+    router.refresh(); 
+    ```
+-   `router.back()`: 导航到浏览器历史记录中的上一个页面。
+-   `router.forward()`: 导航到浏览器历史记录中的下一个页面。
+
+**示例：**
+```jsx
+'use client';
+import { useRouter } from 'next/navigation';
+
+export default function LoginButton() {
+  const router = useRouter();
+
+  const handleLogin = () => {
+    // ... 登录逻辑 ...
+    router.push('/profile');
+  };
+
+  return <button onClick={handleLogin}>登录</button>;
+}
+```
+
+#### 2. `usePathname()`
+
+一个非常简单的 Hook，用于获取**当前 URL 的路径名**（不包含域名和 search-params）。
+
+-   **返回值**: 一个字符串，如 `/dashboard/settings`。
+
+**用途**: 常用于根据当前路径高亮导航链接、显示面包屑导航等。
+
+**示例：**
+```jsx
+'use client';
+import { usePathname } from 'next/navigation';
+import Link from 'next/link';
+
+export default function NavLink({ href, children }) {
+  const pathname = usePathname();
+  const isActive = pathname === href;
+
+  return (
+    <Link href={href} style={{ color: isActive ? 'red' : 'black' }}>
+      {children}
+    </Link>
+  );
+}
+```
+
+#### 3. `useSearchParams()`
+
+用于以**只读**的方式访问当前 URL 的**搜索参数**（`?` 后面的部分）。
+
+-   **返回值**: 一个 `URLSearchParams` 接口的实例。你需要使用 `.get('key')`、`.has('key')` 等方法来读取值。
+
+**用途**: 根据查询参数来渲染不同的 UI，例如从 URL 中读取搜索关键词、页码、筛选条件等。
+
+**示例：**
+```jsx
+'use client';
+import { useSearchParams } from 'next/navigation';
+
+export default function SearchResults() {
+  const searchParams = useSearchParams();
+  const query = searchParams.get('q'); // 获取 ?q=... 的值
+
+  return <div>{query ? `正在搜索: "${query}"` : '请输入搜索词'}</div>;
+}
+```
+
+**注意**: 如果你想修改 URL 参数，你需要结合 `useRouter` 和 `usePathname` 来构建新的 URL 并进行跳转。
+
+#### 4. `useParams()`
+
+用于访问**动态路由段**的参数。
+
+-   **返回值**: 一个包含当前路由动态参数的对象。例如，对于路由 `app/shop/[category]/[item]/page.js`，如果 URL 是 `/shop/electronics/tv`，`useParams()` 会返回 `{ category: 'electronics', item: 'tv' }`。
+
+**用途**: 在客户端组件中获取动态路由的值，以便进行数据获取或渲染。
+
+**示例：**
+```jsx
+'use client';
+import { useParams } from 'next/navigation';
+
+export default function ProductInfo() {
+  const params = useParams(); // 返回 { item: '...' }
+  // 假设路由是 /products/[item]
+  
+  return <h1>商品详情: {params.item}</h1>;
+}
+```
+
+**与服务器组件对比**: 在服务器组件中，`params` 是通过 props (`{ params }`) 传递的，而不需要使用 Hook。`useParams()` 是其在客户端组件中的对应物。
+
+---
+-   `useRouter`（导航）, `usePathname`（路径）, `useSearchParams`（查询参数）, `useParams`（动态参数） 是你最需要掌握的四个核心 Hooks。
+-   理解 `router.refresh()` 的作用，它是实现与服务器数据交互的关键。
+
 ## 路由跳转
 
 ### 用户主动跳转——链接，即Link组件
@@ -255,6 +372,18 @@ app/
 
 ## 搜索与分页路由的实现
 
+### 通过URL参数实现搜索的好处
+
+如上所述，您将使用 URL 搜索参数来管理搜索状态。
+
+如果您习惯于使用客户端状态来做这件事，这种模式可能对您来说比较新。
+
+- 可书签和可分享的 URL：由于搜索参数在 URL 中，用户可以保存应用程序的当前状态，包括他们的搜索查询和过滤器，以供将来参考或分享。
+
+- 服务器端渲染：URL 参数可以直接在服务器上使用以渲染初始状态，这使得处理服务器渲染更加容易。
+
+- 分析和跟踪：将搜索查询和过滤器直接放在 URL 中，可以更轻松地跟踪用户行为，而无需额外的客户端逻辑。
+
 ### 一、 什么是 `searchParams`？
 
 `searchParams`，通常也称为“查询参数”或“URL 参数”，是 URL 中问号 `?` 后面的部分，用于向服务器传递额外的信息。它由一个或多个键值对组成，键值对之间用 `&` 分隔。
@@ -272,37 +401,13 @@ app/
 
 Next.js 提供了两种主要的方式来访问 `searchParams`，取决于你是在**服务器组件**还是**客户端组件**中。
 
-#### 1. 在服务器组件中 (Page, Layout)
-
-在服务器组件（如 `page.js` 或 `layout.js`）中，`searchParams` 会作为**一个 prop** 自动传递给你的组件。这是最直接、最高效的方式。
+#### 1. 在服务器组件中 (Page, Layout) —— props来传递参数
+在服务器组件（如 `page.tsx` 或 `layout.tsx`）中，`searchParams` 会作为**一个 prop** 自动传递给你的组件。这是最直接、最高效的方式。
 
 **工作原理：**
 -   当用户访问一个带查询参数的 URL 时，Next.js 会在服务器上解析这些参数。
 -   它将解析结果作为一个对象，通过名为 `searchParams` 的 prop 传给你的页面组件。
 
-**示例 (`app/products/page.js`):**
-
-```jsx
-// 这是一个服务器组件
-export default function ProductsPage({ searchParams }) {
-  // 如果 URL 是 /products?q=laptop&page=1
-  // searchParams 的值就是: { q: 'laptop', page: '1' }
-
-  const searchQuery = searchParams.q || ''; // 提供默认值
-  const currentPage = searchParams.page || '1'; // 值总是字符串
-
-  console.log(searchParams);
-
-  return (
-    <div>
-      <h1>商品列表</h1>
-      <p>正在搜索: {searchQuery}</p>
-      <p>当前页码: {currentPage}</p>
-      {/* 在这里根据 searchParams 获取并展示数据 */}
-    </div>
-  );
-}
-```
 **关键点**:
 -   `searchParams` 是一个普通的对象。
 -   所有的值**都是字符串类型**，即使它们看起来像数字。你需要手动转换（例如 `parseInt(searchParams.page)`）。
@@ -317,7 +422,7 @@ export default function ProductsPage({ searchParams }) {
 
 **示例 (一个独立的搜索框组件):**
 
-```jsx
+```tsx
 'use client';
 
 import { useSearchParams } from 'next/navigation';
@@ -334,155 +439,60 @@ export default function SearchLabel() {
 }
 ```
 
----
+### 三、分页和搜索的实现
 
-### 三、搜索与分页的实现思路 (推荐模式)
+从视图的角度思考，搜索和分页功能要实现以下效果:
 
-最好的实现方式是**结合服务器组件和客户端组件**：
--   **服务器组件 (`page.js`)**: 负责根据 `searchParams` **获取数据**并展示。它是数据的最终消费者。
--   **客户端组件 (`Controls.js`)**: 负责提供交互界面（搜索框、分页按钮），并**更新 URL 中的 `searchParams`**。它是状态的生产者。
+- 搜索框中搜索，可以渲染对应的结果
+- 即page中要有一个搜索框组件，用户输入的内容需要反应到URL上，作为query参数
+- 通过query参数，fetch相应的数据
 
-这种模式利用了服务器组件的性能优势（数据获取在服务器完成）和客户端组件的交互能力。
+- 用户点击页码，或者箭头可以查看当页的数据
+- 需要一个分页组件，对分页参数进行控制，反应到URL上
+- 通过URL中的分页参数传参至子组件中，配合query参数进行fetch
 
-#### **场景：实现一个可搜索、可分页的商品列表页**
+一个是将用户输入变为URL的问题，一个是将当前页码作为URL的问题
 
-**文件结构:**
-```
-app/
-└── products/
-    ├── page.js          # 服务器组件，展示列表
-    └── Controls.js      # 客户端组件，提供搜索和分页按钮
-```
+将这两个设置为searchParams，将其作为Props通过URL传参
 
-#### **第一步：服务器组件 (`app/products/page.js`)**
+从之前的动态路由可以类比，路由参数是通过URL作为Props传递给page组件的
 
-这个组件读取 URL 参数，获取数据，并将数据和控制逻辑传递给客户端组件。
+通过searchParams其中属性的：得到query用于搜索，得到page用于分页
 
-```jsx
-import Controls from './Controls';
-
-// 模拟一个从数据库或 API 获取数据的函数
-async function fetchProducts({ query, page }) {
-  // 在实际应用中，你会调用一个 API
-  // const res = await fetch(`https://api.example.com/products?q=${query}&page=${page}&limit=10`);
-  // const data = await res.json();
+```tsx
+export default async function Page(props: {
+  searchParams?: Promise<{
+    query?: string;
+    page?: string;
+  }>;
+}) {
+  const searchParams = await props.searchParams;
+  const query = searchParams?.query || '';
+  const currentPage = Number(searchParams?.page) || 1;
+  const totalPages = await fetchInvoicesPages(query);
   
-  // 这里我们用假数据模拟
-  console.log(`Fetching data for query: "${query}", page: ${page}`);
-  const allProducts = Array.from({ length: 100 }, (_, i) => `商品 ${i + 1}`);
-  const filtered = allProducts.filter(p => p.includes(query));
-  
-  const limit = 10;
-  const start = (page - 1) * limit;
-  const paginated = filtered.slice(start, start + limit);
-
-  return {
-    products: paginated,
-    hasNextPage: (start + limit) < filtered.length,
-  };
-}
-
-export default async function ProductsPage({ searchParams }) {
-  const query = searchParams.q || '';
-  const page = parseInt(searchParams.page) || 1;
-
-  const { products, hasNextPage } = await fetchProducts({ query, page });
-
-  return (
-    <div>
-      <h1>商品列表</h1>
-      
-      {/* 客户端组件，用于控制 */}
-      <Controls currentPage={page} hasNextPage={hasNextPage} />
-
-      {/* 展示从服务器获取的数据 */}
-      <ul>
-        {products.map(product => <li key={product}>{product}</li>)}
-      </ul>
-      {products.length === 0 && <p>没有找到相关商品。</p>}
-    </div>
-  );
-}
-```
-
-#### **第二步：客户端组件 (`app/products/Controls.js`)**
-
-这个组件处理用户输入，并更新 URL。
-
-```jsx
-'use client';
-
-import { useSearchParams, usePathname, useRouter } from 'next/navigation';
-import { useDebouncedCallback } from 'use-debounce'; // 推荐使用 debounce 避免频繁请求
-
-export default function Controls({ currentPage, hasNextPage }) {
-  const searchParams = useSearchParams();
-  const pathname = usePathname(); // 获取当前路径，如 /products
-  const { replace } = useRouter(); // 使用 router 来更新 URL
-
-  // 使用 debounce 优化搜索体验
-  const handleSearch = useDebouncedCallback((term) => {
-    const params = new URLSearchParams(searchParams);
-    params.set('page', '1'); // 新的搜索总是从第一页开始
-
-    if (term) {
-      params.set('q', term);
-    } else {
-      params.delete('q');
-    }
-    replace(`${pathname}?${params.toString()}`);
-  }, 300); // 300ms延迟
-
-  const handlePagination = (direction) => {
-    const params = new URLSearchParams(searchParams);
-    const newPage = direction === 'next' ? currentPage + 1 : currentPage - 1;
-    params.set('page', newPage.toString());
-    replace(`${pathname}?${params.toString()}`);
-  };
-
-  return (
-    <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
-      {/* 搜索框 */}
-      <input
-        type="text"
-        placeholder="搜索商品..."
-        onChange={(e) => handleSearch(e.target.value)}
-        defaultValue={searchParams.get('q')?.toString()}
-      />
-
-      {/* 分页按钮 */}
-      <div>
-        <button 
-          onClick={() => handlePagination('prev')} 
-          disabled={currentPage <= 1}
-        >
-          上一页
-        </button>
-        <span> 第 {currentPage} 页 </span>
-        <button 
-          onClick={() => handlePagination('next')} 
-          disabled={!hasNextPage}
-        >
-          下一页
-        </button>
+  return(
+    <div className="w-full">
+      <div className="flex w-full items-center justify-between">
+        <h1 className={`${lusitana.className} text-2xl`}>Invoices</h1>
+      </div>
+      <div className="mt-4 flex items-center justify-between gap-2 md:mt-8">
+        <Search placeholder="Search invoices..." />
+        <CreateInvoice />
+      </div>
+       <Suspense key={query + currentPage} fallback={<InvoicesTableSkeleton />}>
+        <Table query={query} currentPage={currentPage} />
+      </Suspense>
+      <div className="mt-5 flex w-full justify-center">
+        <Pagination totalPages={totalPages} />
       </div>
     </div>
-  );
+  )
 }
 ```
 
-### 完整的数据流（The Round-Trip）
 
-1.  **初始加载**: 用户访问 `/products`。`page.js` 在服务器上运行，`searchParams` 为空，获取第一页的全部数据并渲染。
-2.  **用户搜索**: 用户在搜索框输入 "手机"。
-3.  **客户端操作**: `Controls.js` 中的 `handleSearch` 函数被触发。它创建了一个新的 URL `/products?q=手机&page=1`。
-4.  **URL 更新**: `router.replace()` 更新了浏览器的 URL，**但不会导致页面硬刷新**。Next.js 捕获到这个变化。
-5.  **服务器重新渲染**: Next.js 重新在服务器上渲染 `page.js`，这次传入的 `searchParams` 是 `{ q: '手机', page: '1' }`。
-6.  **数据重新获取**: `fetchProducts` 函数根据新的参数获取过滤后的数据。
-7.  **页面更新**: 服务器将更新后的 HTML 内容发送给客户端，页面无缝更新为搜索结果。
-8.  **用户点击“下一页”**: 重复步骤 3-7，只是这次更新的是 `page` 参数。
 
-这种模式完美地体现了 Next.js App Router 的设计哲学：**让 URL 成为状态的唯一真实来源**，并利用服务器的强大能力来处理数据，同时保持客户端的流畅交互。
 
 # 渲染模式
 
