@@ -633,7 +633,7 @@ currentPage会更新，fetch的数据也会更新
 
 # 渲染模式
 
-### RSC
+## RSC
 
 在nextjs中，每个组件默认是服务端组件
 
@@ -644,14 +644,16 @@ currentPage会更新，fetch的数据也会更新
 - **原生适配性**：服务器组件支持 JavaScript Promise，为像数据获取这样的异步任务提供了原生解决方案。你可以使用 `async/await` 语法，而无需 `useEffect` 、 `useState` 或其他数据获取库。
 - **限制**：不能使用Hooks以及和客户端DOM相关的事件监听函数
 
+
 这个默认行为是理解 Next.js 现代渲染系统的基石。基于此，衍生出了以下几种主要的渲染策略：
 
-### 静态渲染和动态渲染
+## 静态渲染和动态渲染（SSR）
 
 |类型|说明|
 |---|---|
 |**静态渲染**|页面内容在构建（build）时就生成好了，所有用户看到的内容一致，访问速度快。|
 |**动态渲染**|每次访问时服务器动态生成内容，适合内容随用户/时间变化的场景。|
+
 动态渲染强调这个渲染动作是在“用户访问网页的那一刻”发生的，而不是提前生成好存放着。
 
 - 访问博客文章（内容不会变）：适合静态渲染。
@@ -659,5 +661,128 @@ currentPage会更新，fetch的数据也会更新
 
 使用动态渲染，你的应用程序的速度取决于最慢的数据获取。
 
+动态渲染的场景：
+
+- 使用 cookies() 或 headers() 函数。
+- 使用 searchParams prop。
+- 使用 fetch 时设置了 cache: 'no-store' 或 revalidate: 0。
+- 在页面文件中明确声明 export const dynamic = 'force-dynamic'。
+
+| 场景             | 说明                   | 推荐方式                          |
+| -------------- | -------------------- | ----------------------------- |
+| 🔐 需要鉴权的页面     | 用户登录状态不同，显示内容不同      | 动态渲染或中间件处理                    |
+| 🧑‍🤝‍🧑 个性化内容 | 根据用户 ID / Token 获取数据 | `dynamic = 'force-dynamic'`   |
+| 📅 实时数据页面      | 股票、天气、排行榜等随时变化       | fetch + `cache: 'no-store'`   |
+| 🧾 分页、搜索结果页    | URL 参数变化 + 数据实时变化    | 使用 `searchParams` + 动态渲染      |
+| 🌍 地理或设备定向     | 根据 IP、语言、设备类型返回不同内容  | `headers()` + `force-dynamic` |
+SSR:
+- **本质**: 生成要在浏览器中显示的**初始文档结构**。它决定了用户第一次看到页面时的内容。
+
+如果你的**唯一**需求是“在页面加载后，保持数据与后端的实时同步”，那么你确实**不需要**为此使用 Next.js 的动态渲染 (SSR)。纯粹的客户端数据获取库（如 React Query, SWR, or even a simple useEffect with fetch）就能完美胜任。
+
+你需要 SSR 是为了解决**页面初始加载 (Initial Load)** 时的问题，而不是为了后续的数据同步。
+
+## Streaming
+
+流式传输的思想，将数据分块依次传输，可以在next中体现为组件级别的分块和页面级别的分块
+
+与Loading的想法也有共同之处
+
+**Suspense 流式传输 (Streaming) 本质上是动态渲染 (SSR) 的一种高级、优化的形式。**
+### React Suspense
+
+React 的 `Suspense` 允许你**为异步加载的组件或数据添加“加载中”的 fallback UI**。
+
+```tsx
+import { Suspense } from 'react'
+
+<Suspense fallback={<div>加载中...</div>}>
+  <MyAsyncComponent />
+</Suspense>
+```
+
+被`Suspense` 包裹的部分，即便数据没加载好，也会先显示fallback替代，不会因为个别慢请求阻碍整个页面的渲染
+
+### **页面级别的Streaming**
+
+`loading.tsx` 是一个基于 React Suspense 构建的 Next.js 特殊文件。它允许你在页面内容加载时显示备用 UI 作为替代。
+
+`loading.tsx` 和 `page.tsx` 是**具有特殊意义的保留文件名（convention-based components）**，框架会根据它们的命名来自动处理对应逻辑。
+
+ 📂 示例目录结构和加载顺序
+
+```
+/app
+  /dashboard
+    loading.tsx     ← 加载中状态
+    layout.tsx      ← 包裹 dashboard 下所有页面
+    page.tsx        ← 实际页面内容
+```
+
+ 加载顺序：
+
+1. 用户访问 `/dashboard`
+2. Next.js 发现 `layout.tsx` + `page.tsx` 是 **异步加载的**
+3. 就立即渲染 `loading.tsx`
+4. 一旦真实内容加载完，`loading.tsx` 会被卸载
+
+
+### **组件级别的streaming**
+
+同理要使用Suspense来包裹组件
+
+```jsx
+<Suspense fallback={<RevenueChartSkeleton />}> 
+	<RevenueChart /> 
+</Suspense>
+```
+
+在调用子组件这一层，不应该发生阻塞，所以要将Data fetching移至<RevenueChart />内部，而不是在这个主组件fetch然后进行参数传递
+
+#### **希望同时渲染多个组件**
+
+如果几个组件一个一个的出现可能会在视觉上出现奇怪的效果
+
+我们希望部分组件同时渲染
+
+则可以将几个组件包装至一个组件中，一次性显示组件内部包装所有组件的骨架屏，然后并发的加载数据
+
+```jsx
+//可以将多个Card组件包装进一个Cardwrapper组件中
+
+<Suspense fallback={<CardsSkeleton />}>
+  <CardWrapper />
+</Suspense>
+```
+#### **suspense边界的抉择**
+
+🎯 **如何选择放置 Suspense 边界（Suspense Boundaries）的位置，需要根据页面加载体验、数据优先级和数据依赖来权衡，没有绝对的正确答案。**
+
+- **放置位置取决于：**
+    
+    - 想让用户如何体验页面加载（流式体验顺序）；
+    - 哪些内容更重要，需要优先加载；
+    - 哪些组件依赖数据获取。
+        
+- **不同策略的优缺点：**
+    
+    - 🔄 **整页 Suspense（如 `loading.tsx`）：** 简单统一，但如果有慢组件，整个页面都会延迟。
+    - 🔹 **每个组件都用 Suspense：** 精细控制，但组件会一个个“弹出”，影响视觉连贯性。
+    - 🧩 **分组分区流式加载（staggered effect）：** 需要用 wrapper 组件封装，体验更流畅，但开发更复杂。
+        
+- **推荐做法（但非唯一）：**
+    
+    - 把数据获取逻辑尽可能下沉到实际使用它的组件中；
+    - 再用 Suspense 包裹这些组件，实现**局部异步加载**。
+
+
 # 网络请求
+
+## Data fetching（查）
+
+[[Fetching data]]
+
+## Data Mutating （增删改）
+
+## Using forms with Server Actions
 
