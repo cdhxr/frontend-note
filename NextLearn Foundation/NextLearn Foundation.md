@@ -786,3 +786,299 @@ import { Suspense } from 'react'
 
 ## Using forms with Server Actions
 
+在 React 中，您可以在 `<form>` 元素中使用 `action` 属性来调用操作。操作将自动接收原生 FormData 对象，其中包含捕获的数据。
+
+formData会读取form包裹的，所有存在name属性的元素，按钮的submit属性会触发Data的生成传递
+
+1. **客户选择 (Customer Name)**
+    
+    - **元素**: `<select ... name="customerId" ...>
+    - **传递的内容**: 当表单提交时，formData 会包含一个键为 customerId 的条目，其值是用户当前选中的 `<option>` 的 value 属性。
+    - **示例**: 如果用户选择了 ID 为 uuid-1234 的客户，formData.get('customerId') 将会返回字符串 'uuid-1234'。
+        
+2. **发票金额 (Invoice Amount)**
+    
+    - **元素**:` <input ... name="amount" ...>
+    - **传递的内容**: formData 会包含一个键为 amount 的条目，其值是用户在输入框中输入的数字，同样以**字符串**形式存在。
+    - **示例**: 如果用户输入 150.50，formData.get('amount') 将会返回字符串 '150.50'。
+    
+3. **发票状态 (Invoice Status)**
+    
+    - **元素**:
+        - `<input ... name="status" type="radio" value="pending"> 
+        - `<input ... name="status" type="radio" value="paid">
+        
+    - **传递的内容**: 对于 type="radio" 且 name 相同的输入框组，只有**被选中的那个**的值会被传递。formData 会包含一个键为 status 的条目。
+        
+    - **示例**:
+        
+        - 如果用户选中了 "Pending"，formData.get('status') 将返回字符串 'pending'。
+        - 如果用户选中了 "Paid"，formData.get('status') 将返回字符串 'paid'。
+        - 如果用户什么都没选（假设没有默认选中），则 status 这个键可能不会存在于 formData 中。
+
+
+Server Action 是一个
+**可以直接在客户端（例如在表单中或按钮点击时）调用的、
+并且在服务器上安全执行的异步函数**。
+
+**传统模式 (前后端分离)**:
+
+1. 客户端：用户提交表单。
+2. 客户端：使用 fetch 或 axios 将表单数据打包成 JSON。
+3. 客户端：向一个专门的 API 路由（例如 /api/create-post）发送一个 POST 请求。
+4. 服务器：在 API 路由中，接收请求，解析 JSON。
+5. 服务器：验证数据，与数据库交互。
+6. 服务器：返回一个 JSON 响应（成功或失败）。
+7. 客户端：接收响应，处理成功/失败状态，更新 UI。
+
+**使用 Server Action 的新模式**:
+
+1. 客户端：用户提交表单。
+2. 客户端：直接调用一个在服务器上定义的函数。
+3. 服务器：该函数直接执行，验证数据，与数据库交互。
+4. Next.js 自动处理数据重新验证和 UI 更新。
+
+即可以通过action传递函数，直接在服务端执行函数，对数据操作
+
+创建 Server Action 非常简单，只需要在一个函数定义的顶部加上 'use server'; 指令。
+
+对Server Action可以理解为服务端函数一样的东西
+可以为文件顶部加上use server集中管理一个ts文件
+也可以在组件内单独定义
+
+## 数据创建——增
+
+增：将数据项从客户端收集，将其内容  作为向数据库添加的  数据项的内容
+
+导入或者定义Server Action的方法，传递至form的Action中（只用在函数在的地方加use server）
+使用server action，可以通过formData自动进行参数传递
+
+```tsx
+import { createInvoice } from '@/app/lib/actions';
+
+export default function Form({ customers }: { customers: CustomerField[] }) {
+  return (
+    <form action={createInvoice}>
+       ...
+    </form>
+  );
+}
+```
+
+类型校验与数据库数据获取
+
+定义数据库中数据项的类型，并对表单数据进行校验和处理
+这里使用了zod作为依赖
+
+由于我们只从表单中拿到customerId，amount，status三项
+所以利用zod创建了一个排除id和DATE的类型CreateInvoice
+
+```tsx
+const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
+
+const FormSchema = z.object({
+  id: z.string(),
+  customerId: z.string(),
+  amount: z.coerce.number(),
+  status: z.enum(['pending', 'paid']),
+  date: z.string(),
+});
+
+const CreateInvoice = FormSchema.omit({ id: true, date: true });
+
+```
+
+函数编写：数据格式等等的预处理，插入数据库
+
+单位统一，类型转换，生成负责生成的日期
+
+```tsx
+export async function createInvoice(formData: FormData) {
+  // 从表单数据中使用get方法提取原始值
+  // 提示：如果你正在处理包含许多字段的表单，你可能需要考虑使用 JavaScript 的 entries() 方法
+
+  const { customerId, amount, status } = CreateInvoice.parse({
+    customerId: formData.get('customerId'),
+    amount: formData.get('amount'),
+    status: formData.get('status'),
+  });
+  const amountInCents = amount * 100;// 单位统一
+  
+  const date = new Date().toISOString().split('T')[0];// 类型的转化
+  
+  await sql`
+    INSERT INTO invoices (customer_id, amount, status, date)
+    VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
+  `;
+
+  revalidatePath('/dashboard/invoices');// 使页面重新获取数据
+  redirect('/dashboard/invoices');
+}
+```
+### 重定向和数据的刷新
+
+revalidatePath('/dashboard/invoices');// 使页面重新获取数据
+
+redirect('/dashboard/invoices');重定向，提交完回到首页
+
+| 比较项    | `redirect()`（服务端跳转）                    | `router.push()`（客户端跳转） |
+| ------ | -------------------------------------- | ---------------------- |
+| 用法位置   | 只能在 Server Action / Server Component 中 | 只能在 Client Component 中 |
+| 跳转时机   | 提交时就跳转，**浏览器不会加载当前页面**                 | 当前页面先加载，再跳转            |
+| 传输机制   | HTTP 302 重定向 / Next.js 内部跳转            | 使用 JS 修改浏览器地址栏         |
+| 支持无 JS | ✅ 支持（因为运行在服务器）                         | ❌ 需要启用 JS              |
+| SEO    | ✅ 更友好（URL 本身重定向）                       | ❌ 不利于爬虫索引跳转            |
+| 页面刷新   | ✅ 相当于用户访问新页面                           | ❌ 保持 SPA 体验，不刷新页面      |
+
+ ✅ 适合用 `redirect()`（服务端跳转）：
+
+- 表单提交后，**立即导航到其他页面**；
+- 权限检查后，不满足就重定向；
+- 登录成功后跳转；
+- ❗️你希望跳转时 **不要渲染当前页面**，直接转向目标。
+
+✅ 适合用 `router.push()`（客户端跳转）：
+- 用户点击按钮导航；
+- 客户端逻辑判断后跳转；
+- 在客户端组件中处理切页或 tab。
+
+## 数据更新——改
+
+改与增的区别是，你需要通过传入发票编号（id）来更新数据库中的记录
+
+要通过id对数据库中已有的数据项定位，才能更新相应的数据
+
+### 获取传递id
+
+获取这种id的思路无非是通过Props传递或者通过URL路由参数传递
+
+当发生 URL 更新（即页面导航）时，旧的页面组件会被**卸载 (unmount)**，新的页面组件会被**挂载 (mount)**。它们是两个完全独立的渲染过程，因此你**不能**像调用普通函数一样，在导航时通过 props 将数据从旧页面直接传递给新页面。
+
+显然就是通过URL参数
+
+- searchParams查询参数
+- Params动态路由参数
+
+这种情况显然后者更合适
+
+设置`[id]`动态路由后，设置好跳转Link的按钮，到对应的Page
+
+从Page组件的Props拿到动态路由Params的id，再传至相应的组件中用于更新URL
+
+```tsx
+import Form from '@/app/ui/invoices/edit-form';
+import Breadcrumbs from '@/app/ui/invoices/breadcrumbs';
+import { fetchCustomers } from '@/app/lib/data';
+ 
+export default async function Page() {
+  return (
+    <main>
+      <Breadcrumbs
+        breadcrumbs={[
+          { label: 'Invoices', href: '/dashboard/invoices' },
+          {
+            label: 'Edit Invoice',
+            href: `/dashboard/invoices/${id}/edit`,
+            active: true,
+          },
+        ]}
+      />
+      <Form invoice={invoice} customers={customers} />
+    </main>
+  );
+}```
+
+### 数据预填充
+
+修改数据，进入界面后需要对原本的数据进行填充，再修改，这是一个符合操作逻辑的行为
+直接通过id来fetch即可
+
+
+### 绑定Server Action
+
+除了FormData外的参数传递，使用 JS bind 将 id 传递给 Server Action。
+
+```tsx
+import { updateInvoice } from '@/app/lib/actions';
+
+export default function EditInvoiceForm({
+  invoice,
+  customers,
+}: {
+  invoice: InvoiceForm;
+  customers: CustomerField[];
+}) {
+  // 使用 JS bind 将 id 传递给 Server Action。
+  const updateInvoiceWithId = updateInvoice.bind(null, invoice.id);
+ 
+  return (
+    <form action={updateInvoiceWithId}>
+      ...
+    </form>
+  );
+}
+```
+
+注意：在表单中使用隐藏输入字段也可以（例如 `<input type="hidden" name="id" value={invoice.id} />` ）。但是，这些值将在 HTML 源代码中显示为完整文本，这对于敏感数据来说并不理想。
+
+### 定义函数
+
+```tsx
+// Use Zod to update the expected types
+const UpdateInvoice = FormSchema.omit({ id: true, date: true });
+ 
+// ...
+ 
+export async function updateInvoice(id: string, formData: FormData) {
+  const { customerId, amount, status } = UpdateInvoice.parse({
+    customerId: formData.get('customerId'),
+    amount: formData.get('amount'),
+    status: formData.get('status'),
+  });
+ 
+  const amountInCents = amount * 100;
+ 
+  await sql`
+    UPDATE invoices
+    SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
+    WHERE id = ${id}
+  `;
+ 
+  revalidatePath('/dashboard/invoices');
+  redirect('/dashboard/invoices');
+}
+```
+
+逻辑类似创建
+
+## 删除数据
+
+同样的传递id操作
+
+```tsx
+import { deleteInvoice } from '@/app/lib/actions';
+ 
+// ...
+ 
+export function DeleteInvoice({ id }: { id: string }) {
+  const deleteInvoiceWithId = deleteInvoice.bind(null, id);
+ 
+  return (
+    <form action={deleteInvoiceWithId}>
+      <button type="submit" className="rounded-md border p-2 hover:bg-gray-100">
+        <span className="sr-only">Delete</span>
+        <TrashIcon className="w-4" />
+      </button>
+    </form>
+  );
+}
+```
+
+l类似的定义函数
+
+```tsx
+export async function deleteInvoice(id: string) {
+  await sql`DELETE FROM invoices WHERE id = ${id}`;
+  revalidatePath('/dashboard/invoices');
+}
+```
