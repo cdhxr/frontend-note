@@ -2,6 +2,18 @@
 date: 2025-07-29
 ---
 整理总结
+
+URL即状态的思想：
+
+1. **用户交互 (如点击分页按钮) 驱动了 URL 的更新**。
+    - 这是客户端组件 ('use client') 的职责，通过 `<Link>` 或 useRouter 实现。
+2. **URL 的更新定义了应用的新状态**。
+    - 这是“URL 即状态”策略的核心。
+3. **Next.js 渲染系统监听到 URL 的变化，并根据变化的部分 (Path vs. Search Params) 决定如何响应**。    
+    - 这是服务器组件 (Server Components) 的舞台。
+4. **渲染系统执行合适的渲染策略（SSG, SSR, ISR）和数据获取逻辑，生成新的 UI**。
+5. **新的 UI 被发送到浏览器，用户看到更新后的页面**。
+
 # 路由系统
 
 ## **文件系统即路由** 
@@ -38,7 +50,6 @@ Page文件的路由将会被定义成其父文件夹的名字，直到app为单�
 你添加到根布局中的任何 UI 将在你的应用程序的所有页面之间共享。
 
 你可以使用根布局来修改你的 `<html>` 和 `<body>` 标签，并添加元数据
-
 
 
 ## 路由Hooks
@@ -491,13 +502,162 @@ export default async function Page(props: {
 }
 ```
 
+关键显然是将search组件和pagination组件获取的信息同步到URL上
 
+#### Search
 
+服务端组件（如 Next.js App Router 中的 **Server Components**）本质上是在服务器上渲染的，不在浏览器中运行，因此 **不能直接监听客户端事件**（比如 `onChange`、`onClick` 等 DOM 事件）
+
+所以要获取用户的操作信息，必须使用客户端组件
+
+```tsx
+'use client';
+```
+
+客户端组件无法通过Props获取参数，而是通过解析URL获取参数
+
+```tsx
+  const searchParams = useSearchParams(); //拿到路由中的搜索参数字符串
+  const pathname = usePathname();
+  const { replace } = useRouter();
+```
+
+防抖钩子，降低请求频率，优化性能
+handleSearch函数，绑定为输入框change的触发的事件函数，
+目的是在输入查询信息改变时对URL做出同步
+
+将拿到的字符串解析为URLSearchParams对象实例，用set，delete的方法，对其进行修改
+再使用replace对URL进行同步修改
+
+```tsx
+  const handleSearch = useDebouncedCallback((term) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('page', '1');
+    if (term) {
+      params.set('query', term);
+    } else {
+      params.delete('query');
+    }
+    replace(`${pathname}?${params.toString()}`);
+  }, 300);
+```
+
+在input中加上defaultValue，非受react控制的默认值，从URL中获取、
+目的是在URL改变时在输入框做同步
+
+```tsx
+      <input
+        className="peer block w-full rounded-md border border-gray-200 py-[9px] pl-10 text-sm outline-2 placeholder:text-gray-500"
+        placeholder={placeholder}
+        onChange={(e) => {
+          handleSearch(e.target.value);
+        }}
+        defaultValue={searchParams.get('query')?.toString()} // 保持 URL 和输入同步,使用defaultvalue，意味着这是非受react状态控制的
+      />
+```
+
+这样就完成了，从用户输入到URL更新，然后在page组件会被重新解析传入table组件，用于fetch新数据，渲染新内容的搜索实现
+#### pagination
+
+同样，要处理用户的在浏览器DOM节点的交互，所以要用client组件
+由于需要通过URL获得分页page参数,，所以需要使用Hooks解析URL，存入对象中
+通过对象操作，修改路由参数，再对URL进行更新同步
+
+不同的是，这里不采用replace进行URL的更新，而是使用Link组件，向其传递新的URL
+
+|            |                             |                         |
+| ---------- | --------------------------- | ----------------------- |
+| 特性         | 搜索 (replace)                | 分页 (<Link> / push)      |
+| **用户意图**   | 修改/提炼当前视图                   | 导航到下一个/上一个离散的视图         |
+| **历史记录**   | **不应**创建新的历史条目              | **应该**创建新的历史条目          |
+| **“后退”行为** | 跳过中间的输入步骤，直接返回搜索前的页面        | 按步骤返回上一页                |
+| **实现方式**   | 编程式导航 useRouter().replace() | 声明式导航 <Link href="..."> |
+
+**一个简单的判断法则：**
+- 问自己：“用户的这个操作，是否值得在浏览器历史中留下一个‘足迹’？”
+    - **是** -> 使用 <Link> (或 router.push())
+    - **否** -> 使用 router.replace()
+
+区别之一是，是否留下历史记录
+区别之二是，一个是点击跳转的交互，一个是在输入信息后自动更新的交互，前者显然可以通过更新跳转的链接来实现，后者希望再用户输入后自动更新，没有用户点击的过程，是不合适的
+
+具体实现：
+
+```tsx
+export default function Pagination({ totalPages }: { totalPages: number }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentPage = Number(searchParams.get('page')) || 1;
+  const allPages = generatePagination(currentPage, totalPages);
+
+  // 将页码转换为URL的函数
+  const createPageURL = (pageNumber: number | string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('page', pageNumber.toString());
+    return `${pathname}?${params.toString()}`;
+  };
+  return (
+    <>
+        ...
+        <PaginationArrow
+          direction="left"
+          href={createPageURL(currentPage - 1)}
+          isDisabled={currentPage <= 1}
+        />
+        ...
+              <PaginationNumber
+                key={`${page}-${index}`}
+                href={createPageURL(page)}
+                page={page}
+                position={position}
+                isActive={currentPage === page}
+              />		
+		...
+        <PaginationArrow
+          direction="right"
+          href={createPageURL(currentPage + 1)}
+          isDisabled={currentPage >= totalPages}
+        />
+		...     
+    </>
+  )
+// ...
+return
+    <Link className={className} href={href}>
+      {icon}
+    </Link>
+```
+
+URL更新后，page组件接收到的参数更新，
+currentPage会更新，fetch的数据也会更新
 
 # 渲染模式
 
+### RSC
 
+在nextjs中，每个组件默认是服务端组件
 
+服务端组件的特点：
+
+- **安全**：由于服务器组件在服务器上运行，你可以直接查询数据库，无需额外的 API 层。这让你免于编写和维护额外的代码。
+- **性能**： 服务器组件在服务器上运行，因此你可以将昂贵的请求数据和逻辑保留在服务器上，仅将结果发送到客户端。
+- **原生适配性**：服务器组件支持 JavaScript Promise，为像数据获取这样的异步任务提供了原生解决方案。你可以使用 `async/await` 语法，而无需 `useEffect` 、 `useState` 或其他数据获取库。
+- **限制**：不能使用Hooks以及和客户端DOM相关的事件监听函数
+
+这个默认行为是理解 Next.js 现代渲染系统的基石。基于此，衍生出了以下几种主要的渲染策略：
+
+### 静态渲染和动态渲染
+
+|类型|说明|
+|---|---|
+|**静态渲染**|页面内容在构建（build）时就生成好了，所有用户看到的内容一致，访问速度快。|
+|**动态渲染**|每次访问时服务器动态生成内容，适合内容随用户/时间变化的场景。|
+动态渲染强调这个渲染动作是在“用户访问网页的那一刻”发生的，而不是提前生成好存放着。
+
+- 访问博客文章（内容不会变）：适合静态渲染。
+- 访问用户的个人信息页（内容因人而异）：适合动态渲染。
+
+使用动态渲染，你的应用程序的速度取决于最慢的数据获取。
 
 # 网络请求
 
