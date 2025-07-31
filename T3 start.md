@@ -182,6 +182,10 @@ main();
 
 在vercel的free方案中使用neon来为postgres提供代理
 
+pnpm add 缺失的依赖项
+
+在vercel的项目Storage界面，选择Drizzle，粘贴至
+
 ```tsx
 // index.ts
 // src/db.ts
@@ -192,9 +196,14 @@ import * as schema from "./schema";
 
 config({ path: ".env" }); // or .env.local
 
+const sql = neon(process.env.DATABASE_URL);
+export const db = drizzle({ client: sql, schema });
+```
+
+必要时补充错误处理，解决lint报错
+
+```tsx
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is not defined');
 }
-const sql = neon(process.env.DATABASE_URL);
-export const db = drizzle({ client: sql, schema });
 ```
