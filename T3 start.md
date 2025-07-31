@@ -126,4 +126,75 @@ Advanced option的URL前缀使用默认的POSTGRES
 
 ![[env配置.png]]
 
-复制env.local的内容，进入代码中的.env进行粘贴
+复制env.local的内容，进入代码中的.env进行粘贴，设置好数据库连接
+
+# 设置drizzle
+
+## ✅ 1. `schema.ts` 
+
+> 定义数据库的**表结构**，告诉 ORM（如 drizzle）你的数据库长什么样。
+
+### 举例：
+
+```ts
+// schema.ts
+import { pgTable, serial, text } from "drizzle-orm/pg-core";
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+});
+```
+
+🔹 这相当于你在数据库里执行：
+
+```sql
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL
+);
+```
+
+---
+
+## ✅ 2. `index.ts` 
+
+> 通常作为**项目的入口点**，用于执行实际的逻辑，比如：连接数据库、执行查询、运行程序等。
+
+### 举例：
+
+```ts
+// index.ts
+import { db } from "./db";
+import { users } from "./schema";
+
+async function main() {
+  const result = await db.select().from(users);
+  console.log(result);
+}
+
+main();
+```
+
+🔹 这个文件会用 `schema.ts` 里的结构去操作数据库。
+
+## 设置drizzle
+
+在vercel的free方案中使用neon来为postgres提供代理
+
+```tsx
+// index.ts
+// src/db.ts
+import { drizzle } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
+import { config } from "dotenv";
+import * as schema from "./schema";
+
+config({ path: ".env" }); // or .env.local
+
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL is not defined');
+}
+const sql = neon(process.env.DATABASE_URL);
+export const db = drizzle({ client: sql, schema });
+```
