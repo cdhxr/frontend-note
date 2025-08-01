@@ -377,3 +377,5 @@ export const config = {
 
 创建_components文件夹，文件夹名字前有下划线，意味着组件不会被next app router包含在路由中
 
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string(),
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
