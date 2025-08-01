@@ -1,4 +1,29 @@
 
+# 格式化设置
+
+创建.vscode/settings.json
+
+```json
+{
+  "editor.codeActionsOnSave": {
+    "source.fixAll.biome": "explicit"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "typescript.suggest.autoImports": true,
+  "javascript.suggest.autoImports": true
+}
+```
 
 #  deploy pur repo to Vercel
 
@@ -78,8 +103,8 @@ const mockImages = mockUrls.map((url, index) => ({
 }));
 
 //一个让数据翻倍的小技巧
-{[...mockImages, ...mockImages, ...mockImages].map((image) => (
-	<div key={image.id} className="w-48">
+{[...mockImages, ...mockImages, ...mockImages].map((image, index) => (
+	<div key={`${image.id}-${index}`} className="w-48">
 		<img src={image.url} alt="" />
 	</div>
 ))}
@@ -207,3 +232,44 @@ if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is not defined');
 }
 ```
+
+如果项目中使用的是DATABASE_URL（默认），就将.env的 DATABASE_URL 加入vercel上的Environment Variable
+
+否则就将项目中的DATABASE_URL都改为POSTGRES_URL（在创建数据库时设置的前缀）
+
+## drizzle的使用以及校验配置
+
+t3默认存在的scheme.ts，中有posts表
+
+```ts
+export const posts = createTable(
+	"post",
+	(d) => ({
+		id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+		name: d.varchar({ length: 256 }),
+		createdAt: d
+			.timestamp({ withTimezone: true })
+			.default(sql`CURRENT_TIMESTAMP`)
+			.notNull(),
+		updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+	}),
+	(t) => [index("name_idx").on(t.name)],
+);
+```
+
+
+t3已经配置了Drizzle kit，使项目支持Drizzle相关的命令
+
+```
+pnpm run db:push  
+pnpm run db:studio
+```
+
+`db:push` = **同步你的 schema.ts 到真实数据库**
+`db:studio`可以打开Drizzle的网页对数据表进行数据的可视化操作
+
+![[drizzleStudio.png]]
+
+在这里的数据能实时反应到本地的localhost中
+而部署后，代码和数据库是“静态”的，**不会自己监听你的代码改动**。
+需要重新部署以适应更新
