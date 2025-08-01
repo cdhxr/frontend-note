@@ -25,6 +25,8 @@
 }
 ```
 
+![[使用工作区ts版本.png]]
+
 #  deploy pur repo to Vercel
 
 在Vervcel中导入项目，尝试deploy，但是会失败，因为在Environment Variable中必须一个数据库的设置
@@ -186,20 +188,6 @@ CREATE TABLE users (
 
 > 通常作为**项目的入口点**，用于执行实际的逻辑，比如：连接数据库、执行查询、运行程序等。
 
-### 举例：
-
-```ts
-// index.ts
-import { db } from "./db";
-import { users } from "./schema";
-
-async function main() {
-  const result = await db.select().from(users);
-  console.log(result);
-}
-
-main();
-```
 
 🔹 这个文件会用 `schema.ts` 里的结构去操作数据库。
 
@@ -273,3 +261,75 @@ pnpm run db:studio
 在这里的数据能实时反应到本地的localhost中
 而部署后，代码和数据库是“静态”的，**不会自己监听你的代码改动**。
 需要重新部署以适应更新
+
+为Page设置动态路由，这样不会应用ServerSide的Cache，而是每次访问页面都对数据库重新获取数据，这样部署的版本也可以通过刷新同步数据
+
+```tsx
+export const dynamic = "force-dynamic";
+```
+# 修改数据库
+
+```tsx
+export const images = createTable(
+	"image",
+	(d) => ({
+		id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+		name: d.varchar("name", { length: 256 }).notNull(),
+		url: d.varchar("url", { length: 1024 }).notNull(),
+		createdAt: d
+			.timestamp({ withTimezone: true })
+			.default(sql`CURRENT_TIMESTAMP`)
+			.notNull(),
+		updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+	}),
+	(t) => [index("name_idx").on(t.name)],
+);
+```
+
+将更改应用至serverSide，然后
+
+```powershell
+pnpm run db:push
+
+Is t3gallery_demo_image table created or renamed from another table?
+❯ + t3gallery_demo_image                       create table
+  ~ t3gallery_demo_post › t3gallery_demo_image rename table
+
+· You're about to delete t3gallery_demo_post table with 2 items
+
+THIS ACTION WILL CAUSE DATA LOSS AND CANNOT BE REVERTED
+
+Do you still want to push changes?
+  No, abort
+❯ Yes, I want to remove 1 table,
+```
+
+这时设置完成后，生产环境会中断出错，这是正常现象
+
+在DrizzleStudio将mockData应用至真正的数据库
+
+```tsx
+export default async function HomePage() {
+	// 按时间排序
+	const images = await db.query.images.findMany({
+		orderBy: (model, { desc }) => desc(model.id),
+	});
+
+	return (
+		<main className="">
+			<div className="flex flex-wrap gap-4">
+				{[...images, ...images, ...images].map((image, index) => (
+					<div key={`${image.id}-${index}`} className="flex w-48 flex-col">
+						<img src={image.url} alt="" />
+						<p className="text-gray-500 text-sm">{image.name}</p>
+					</div>
+				))}
+			</div>
+		</main>
+	);
+}
+```
+
+# 使用Clerk来做Auth
+
+
