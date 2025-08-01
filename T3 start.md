@@ -332,4 +332,43 @@ export default async function HomePage() {
 
 # 使用Clerk来做Auth
 
+在clerk创建组件，将生成的env内容加入至vercel
+
+pnpm add @clerk/nextjs
+
+src下创建middleware.ts
+
+```ts
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+
+const isProtectedRoute = createRouteMatcher(['/dashboard(.*)', '/forum(.*)'])
+
+export default clerkMiddleware(async (auth, req) => {
+  if (isProtectedRoute(req)) await auth.protect()
+})
+
+export const config = {
+  matcher: [
+    // Skip Next.js internals and all static files, unless found in search params
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Always run for API routes
+    '/(api|trpc)(.*)',
+  ],
+}
+```
+
+在root layout中导入ClerkProvider，并包裹全局
+
+```tsx
+		<ClerkProvider>
+		  <html lang="en" className={`${geist.variable}`}>
+			<body className="flex flex-col gap-4">
+				<TopNav />
+				{children}
+			</body>
+		  </html>
+		</ClerkProvider>
+```
+
+创建_components文件夹，文件夹名字前有下划线，意味着组件不会被next app router包含在路由中
 
