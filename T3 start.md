@@ -370,3 +370,127 @@ export const config = {
 
 （生产环境下没有成功，大概需要得到production key）
 
+# 配置uploadthing，使用户与你的uploadthing交互
+
+将uploadting中的API Keys放入.env中
+
+创建 api/uploadthing/core.ts 将uploadthing的docs里的对应app router的core.ts内容copy进去
+
+import { auth } from "@clerk/nextjs/server";
+
+删除fake auth function，修复报错的内容
+
+创建 api/uploadthing/route.ts 将uploadthing的docs里的对应app router的core.ts内容copy进去
+
+```ts
+import { auth } from "@clerk/nextjs/server";
+import { createUploadthing, type FileRouter } from "uploadthing/next";
+import { UploadThingError } from "uploadthing/server";
+
+const f = createUploadthing();
+
+// FileRouter for your app, can contain multiple FileRoutes
+export const ourFileRouter = {
+  // Define as many FileRoutes as you like, each with a unique routeSlug
+  imageUploader: f({
+    image: {
+      /**
+       * For full list of options and defaults, see the File Route API reference
+       * @see https://docs.uploadthing.com/file-routes#route-config
+       */
+      maxFileSize: "4MB",
+      maxFileCount: 1,
+    },
+  })
+    // Set permissions and file types for this FileRoute
+    .middleware(async ({ req }) => {
+      // This code runs on your server before upload
+      const user = auth();
+
+      // If you throw, the user will not be able to upload
+      if (!user) throw new UploadThingError("Unauthorized");
+
+      // Whatever is returned here is accessible in onUploadComplete as `metadata`
+      return { userId: (await user).userId };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      // This code RUNS ON YOUR SERVER after upload
+      console.log("Upload complete for userId:", metadata.userId);
+
+      console.log("file url", file.ufsUrl);
+
+      // !!! Whatever is returned here is sent to the clientside `onClientUploadComplete` callback
+      return { uploadedBy: metadata.userId };
+    }),
+} satisfies FileRouter;
+
+export type OurFileRouter = typeof ourFileRouter;
+
+```
+
+FileRouter定义了用户上传文件的所有方式
+
+```ts
+import { createRouteHandler } from "uploadthing/next";
+
+import { ourFileRouter } from "./core";
+
+// Export routes for Next App Router
+export const { GET, POST } = createRouteHandler({
+  router: ourFileRouter,
+
+  // Apply an (optional) custom config:
+  // config: { ... },
+});
+```
+
+加入一个上传按钮，使用户能够直接在站点内上传至我的uploading服务器，
+
+创建一个utils中的uploadthing.ts
+
+```ts
+import {
+  generateUploadButton,
+  generateUploadDropzone,
+} from "@uploadthing/react";
+
+import type { OurFileRouter } from "~/app/api/uploadthing/core";
+
+export const UploadButton = generateUploadButton<OurFileRouter>();
+export const UploadDropzone = generateUploadDropzone<OurFileRouter>();
+```
+
+并实际的引用他
+`<UploadButton endpoint="imageUploader" />`
+
+endpoint是ImageUploader，后端定义的数据结构，即core.ts定义的接口
+
+# 加上uploadButton
+
+想在topnav中加上uploadButton的话，必须将导入的UploadButton封装在一个useClient的组件中，因为，UploadButton内部使用了useRef，不能直接被服务端组件渲染
+
+因为，服务端组件只会直接检查引用组件内的第一层
+
+所以这样可以避免报错，成功上传至uploadthing的服务器
+
+但是，依旧不会上传至我们的服务器中，写入我们部署的数据库
+但是，我们不能直接写一个onComplete事件处理，因为这是一个服务端组件
+
+因为这本质上还是一个客户端组件，无法在服务端组件上运行事件
+
+uploadthing为这个情况提供了处理
+
+```ts
+    .onUploadComplete(async ({ metadata, file }) => {
+      ...
+      await db.insert(images).values({
+        name: file.name,
+        url: file.ufsUrl,
+      })
+      ...
+    }),
+```
+
+这部分的代码会在上传完成后执行，加上对数据库的操作即可
+
+现在，上传完成，刷新之后，数据会更新在页面上，但是依旧不是实时更新的
