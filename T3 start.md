@@ -336,21 +336,12 @@ export default async function HomePage() {
 
 pnpm add @clerk/nextjs
 
-src下创建middleware.ts
+src下创建middleware.ts，这是一个没有设置任何路由守护的中间件设置
 
 ```ts
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { clerkMiddleware } from '@clerk/nextjs/server'
 
-const isProtectedRoute = createRouteMatcher(['/dashboard(.*)', '/forum(.*)'])
-
-export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) {
-    const user = await auth()
-    if (!user.userId) {
-      return Response.redirect(new URL('/sign-in', req.url))
-    }
-  }
-})
+export default clerkMiddleware()
 
 export const config = {
   matcher: [
@@ -377,5 +368,5 @@ export const config = {
 
 创建_components文件夹，文件夹名字前有下划线，意味着组件不会被next app router包含在路由中
 
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string(),
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+（生产环境下没有成功，大概需要得到production key）
+
