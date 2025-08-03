@@ -538,3 +538,40 @@ userId是从用户登录后执行了middleware后返回的，无法直接通过U
 ```
 
 对了要在vercel中加上uploadthing中对应的key
+
+# server-only和react taint
+
+目前的请求是在组件内部直接写一个drizzle的语句，这样其实可能会带来代码阅读层面的一些误解，可能会被认为在客户端写了一个sql语句在一定程度的安全风险
+
+所以这不是一种好的方法，我们应该把请求相关的语句，放在server folder中集中管理，创建一个queries.ts
+
+server only是一个package， pnpm add server-only 
+
+useclient意味着它会把JavaScript推送到客户端执行，但代码依旧会在服务端执行
+useServer意味着它暴露了端点，给客户端使用
+
+但如果希望一个文件仅仅在服务端工作，永远不会在客户端运行，应该使用server-only
+
+创建一个DataAccessLayer
+
+```ts
+import "server-only";
+import { db } from "./db";
+import { auth } from "@clerk/nextjs/server";
+
+export async function getMyImages() {
+
+    const user = await auth();
+    if (!user.userId) throw new Error("Unauthorized");
+
+    const images = await db.query.images.findMany({
+        where: (model, { eq }) => eq(model.userId, user.userId),
+		orderBy: (model, { desc }) => desc(model.id),
+	});
+	return images;
+}
+```
+
+顺便完善鉴权逻辑
+
+
