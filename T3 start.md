@@ -539,20 +539,21 @@ userId是从用户登录后执行了middleware后返回的，无法直接通过U
 
 对了要在vercel中加上uploadthing中对应的key
 
-# server-only和react taint
+# server-only
 
 目前的请求是在组件内部直接写一个drizzle的语句，这样其实可能会带来代码阅读层面的一些误解，可能会被认为在客户端写了一个sql语句在一定程度的安全风险
 
 所以这不是一种好的方法，我们应该把请求相关的语句，放在server folder中集中管理，创建一个queries.ts
 
 server only是一个package， pnpm add server-only 
+`server-only` 是 Next.js 提供的一个 **强约束工具**，用于标记某些模块只能在 **服务端使用**。
 
 useclient意味着它会把JavaScript推送到客户端执行，但代码依旧会在服务端执行
 useServer意味着它暴露了端点，给客户端使用
 
 但如果希望一个文件仅仅在服务端工作，永远不会在客户端运行，应该使用server-only
 
-创建一个DataAccessLayer
+创建一个DataAccessLayer，顺便完善鉴权逻辑
 
 ```ts
 import "server-only";
@@ -572,6 +573,38 @@ export async function getMyImages() {
 }
 ```
 
-顺便完善鉴权逻辑
+
+# 使用Image组件
+
+用户上传图片 → UploadThing 存储到 utfs.io → 返回图片 URL → 
+你的应用保存 URL 到数据库 → 页面显示图片时需要加载 utfs.io 的图片
+
+- **安全考虑**：Next.js 默认**禁止**加载外部域名的图片，防止恶意图片链接
+- **性能优化**：Next.js 需要知道哪些域名是可信的，才能对图片进行优化处理
+- **防止滥用**：避免你的服务器被用作免费的图片代理
+
+在config中加上images的设置
+
+```
+    images: {
+        remotePatterns: [{ hostname:"utfs.io"}],
+    },
+```
+
+- `utfs.io` 是 **UploadThing** 服务的图片存储域名
+- 当用户通过 UploadThing 上传图片时，图片会存储在 `utfs.io` 域名下
+- 你的应用需要显示这些上传的图z片
+
+应用组件，为其加上style={{ objectFit: "contain" }} ，fill，配合其父容器包含了宽高，满足了响应式和宽度高度定义的要求
+
+```tsx
+<div key={`${image.id}-${index}`} className="flex h-48 w-48 flex-col">
+	<Image
+		src={image.url} 
+		alt={image.name} 
+		style={{ objectFit: "contain" }} 
+		fill
+	/>
+```
 
 
