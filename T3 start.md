@@ -587,24 +587,47 @@ export async function getMyImages() {
 
 ```
     images: {
-        remotePatterns: [{ hostname:"utfs.io"}],
+        remotePatterns: [{ hostname:"j5x8g6brq6.ufs.sh"}],
     },
 ```
 
-- `utfs.io` 是 **UploadThing** 服务的图片存储域名
-- 当用户通过 UploadThing 上传图片时，图片会存储在 `utfs.io` 域名下
+- `j5x8g6brq6.ufs.sh` 是 **UploadThing** 服务的图片存储域名
+- 当用户通过 UploadThing 上传图片时，图片会存储在 `j5x8g6brq6.ufs.sh` 域名下
 - 你的应用需要显示这些上传的图z片
 
-应用组件，为其加上style={{ objectFit: "contain" }} ，fill，配合其父容器包含了宽高，满足了响应式和宽度高度定义的要求
+应用组件
 
 ```tsx
-<div key={`${image.id}-${index}`} className="flex h-48 w-48 flex-col">
-	<Image
-		src={image.url} 
-		alt={image.name} 
-		style={{ objectFit: "contain" }} 
-		fill
-	/>
+					<Image
+						src={image.url}
+						alt={image.name}
+						style={{ objectFit: "contain" }}
+						width={192}
+						height={192}
+						unoptimized // 对单个图片禁用优化
+					/>
 ```
 
+
+经过调试，发现unoptimized // 对单个图片禁用优化，才能正常获取
+
+这表明 Next.js 服务器无法稳定连接到 `j5x8g6brq6.ufs.sh` 来下载原始图片。
+
+可能的原因：
+
+- 网络连接不稳定
+- 远程服务器限制了请求频率
+- 防火墙或代理问题
+- DNS 解析问题
+
+**unoptimized: true 的效果**
+
+启用 `unoptimized` 后：
+
+- 浏览器直接请求原始图片 URL
+- 跳过 Next.js 的图片优化服务
+- 图片直接从 `https://j5x8g6brq6.ufs.sh/f/...` 加载
+- 不会经过 `/_next/image` 端点
+
+# Routing/image page (parallel route)
 
