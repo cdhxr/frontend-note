@@ -493,4 +493,48 @@ uploadthing为这个情况提供了处理
 
 这部分的代码会在上传完成后执行，加上对数据库的操作即可
 
-现在，上传完成，刷新之后，数据会更新在页面上，但是依旧不是实时更新的
+现在，上传完成，刷新之后，数据会更新在页面上，但是依旧不是实时更新的，接下来会逐步修复
+
+# 画廊用户区分
+
+现在所有的用户可以看到所有用户上传的图片，我们希望用户只能看到自己上传的图片
+
+为数据库添加字段userId
+为uploadthing的core进行修改，适配新数据库
+
+```ts
+    .middleware(async ({ req }) => {
+      // This code runs on your server before upload
+      const user = await auth();
+
+      // If you throw, the user will not be able to upload
+      if (!user.userId) throw new UploadThingError("Unauthorized");
+
+      // Whatever is returned here is accessible in onUploadComplete as `metadata`
+      return { userId: user.userId };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      await db.insert(images).values({
+        name: file.name,
+        url: file.ufsUrl,
+        userId: metadata.userId,
+      });
+
+      // !!! Whatever is returned here is sent to the clientside `onClientUploadComplete` callback
+      return { uploadedBy: metadata.userId };
+    }),
+```
+
+Auth函数是clerk提供的获取登录用户信息的方法
+
+userId是从用户登录后执行了middleware后返回的，无法直接通过UploadComplete内Auth函数调用
+
+现在通过DrizzleKit更新数据库
+
+在body内加上这个，可以让uploadthing进行预渲染
+
+```tsx
+<NextSSRPlugin routerConfig={extractRouterConfig(ourFileRouter)} />
+```
+
+对了要在vercel中加上uploadthing中对应的key
